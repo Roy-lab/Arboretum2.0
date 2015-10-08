@@ -15,8 +15,10 @@ class GeneExpManager
 	int readExpression(const char* aFName);
 	vector<double>* getExp(const string&);
 	map<string,vector<double>*>& getGeneSet();
-	
+	vector<string>& getExpHeaders();
+
 	private:
 	map<string,vector<double>*> exprSet;
+	vector<string> exprHeaders;
 };
 #endif

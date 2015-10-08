@@ -1,3 +1,21 @@
+/*
+Arboretum: An algorithm to cluster functional genomesomics data from multiple species
+    Copyright (C) 2013 Sushmita Roy sushroy@gmail.com
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+#include <iostream>
 #include <iostream>
 #include <fstream>
 #include <string.h>
@@ -5,15 +23,12 @@
 #include <math.h>
 #include "GeneExpManager.H"
 
-
 GeneExpManager::GeneExpManager()
 {
-
 }
 
 GeneExpManager::~GeneExpManager()
 {
-
 }
 
 int 
@@ -59,10 +74,23 @@ GeneExpManager::readExpression(const char* aFName)
 				expr=new vector<double>;
 				exprSet[geneName]=expr;
 			}
+			//else
+			//{
+			//	expr->push_back(atof(tok));
+			//}
 			else
-			{
-				expr->push_back(atof(tok));
-			}
+                        {
+                                if(linecnt>0)
+                                {
+                                        expr->push_back(atof(tok));
+                                }
+                                else
+                                {
+                                        string name(tok);
+                                        exprHeaders.push_back(tok);
+                                }
+
+                        }
 			tokCnt++;
 			tok=strtok(NULL,"\t");
 		}
@@ -87,5 +115,11 @@ map<string,vector<double>*>&
 GeneExpManager::getGeneSet()
 {
 	return exprSet;
+}
+
+vector<string>&
+GeneExpManager::getExpHeaders()
+{
+        return exprHeaders;
 }
 

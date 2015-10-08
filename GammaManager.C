@@ -1,6 +1,24 @@
+/*
+Arboretum: An algorithm to cluster functional genomesomics data from multiple species
+    Copyright (C) 2013 Sushmita Roy sushroy@gmail.com
 
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+#include <iostream>
 #include <math.h>
 #include <string.h>
+#include <fstream>
 #include <gsl/gsl_randist.h>
 #include "SpeciesDistManager.H"
 #include "GeneTree.H"
@@ -52,32 +70,31 @@ GammaManager::setSpeciesDistManager(SpeciesDistManager* aPtr)
 	return 0;
 }
 
+SpeciesDistManager* 
+GammaManager::getSpeciesDistManager()
+{
+	return spdistMgr;
+}
 
 int 
 GammaManager::initGamma(int ogid, string& geneName, string& specName,int clustID)
 {
-	if(ogid==1002|| ogid==13692)
-	{
-		cout <<"Found OGID "<< ogid << endl;
-	}
-	if(strcmp(geneName.c_str(),"CAGL0B03899g")==0)
-	{
-		cout <<"Stop here " << endl;
-	}
+	//cout << "Now running GammaManager::initGamma for " << ogid << endl;
 	Gamma* gamma=NULL;
 	MappedOrthogroup* mor=mgrpReader->getMappedOrthogroup(geneName.c_str(),specName.c_str());
 	if(gammaSet.find(ogid)==gammaSet.end())
 	{
 		gamma=new Gamma;
 		gamma->setMaxClusterCnt(maxClusterCnt);
-		gammaSet[ogid]=gamma;	
+		gammaSet[ogid]=gamma;
 		GeneTree* gtree=gtMgr.getGeneTree(mor);
+		cout << "Init from gene tree: " << ogid << endl;
 		gamma->initUsingGeneTree(gtree);
 		if(gamma->getDupAncestor().length()>0)
 		{
 			ogDupAncMap[ogid]=gamma->getDupAncestor();
 		}
-		if(ogid==4597)
+		if(ogid==3435 ||  ogid==3603 || ogid==1942 || ogid==3440)
 		{
 			cout <<"Now showing " << ogid << endl;
 			gamma->showTree();
@@ -95,11 +112,6 @@ GammaManager::initGamma(int ogid, string& geneName, string& specName,int clustID
 int 
 GammaManager::estimateLeafGamma(int ogid,map<int,double>& prob,string& geneName, string& specName)
 {
-	if(ogid==4595 && strcmp(specName.c_str(),"Scer")==0)
-	{
-	//	cout << "Stop here" << endl;	
-	}
-	
 	Gamma* gamma_og=gammaSet[ogid];
 	Gamma::Node* m=gamma_og->getGeneNode(geneName,specName);
 	if(m->normTerm==NULL)
@@ -120,6 +132,10 @@ GammaManager::estimateLeafGamma(int ogid,map<int,double>& prob,string& geneName,
 				cout <<"Posterior is nan/inf for  "<< geneName <<" species " << specName << "cluster id "  << pIter->first
 				<< " pval=" << pval << " prior=" << prior << endl;
 			}
+			if(post<0)
+                        {
+                                cout <<"Posterior is negative for  "<< geneName <<" species " << specName << "cluster id "  << pIter->first << " pval=" << pval << " prior=" << prior << endl;
+                        }
 			anormTerm=anormTerm+post;
 			m->gamma->setValue(post,r,pIter->first);
 		}
@@ -127,32 +143,465 @@ GammaManager::estimateLeafGamma(int ogid,map<int,double>& prob,string& geneName,
 		{
 			double aval=m->gamma->getValue(r,c);
 			aval=aval/anormTerm;
+			if(aval<0)
+                        {
+                                cout <<"Posterior is negative for  "<< geneName <<" species " << specName << "cluster id "  << c << " aval=" << aval << endl;
+                        }
 			m->gamma->setValue(aval,r,c);
 		}
 		m->normTerm->setValue(anormTerm,0,r);
 	}
-	/*if(ogid==1585|| ogid==2178|| ogid==2894)
+	if(ogid==5236) //1585|| ogid==2178|| ogid==2894)
 	{
 		cout << "Leaf gamma: " <<specName <<" " << m->name << endl;
 		m->gamma->showMatrix();
-	}*/
+	}
 	return 0;
 }
 
 //At this point all the leaf nodes have been initialized with whatever the data told us
+int 
+GammaManager::estimateLeafAlpha(int ogid,map<int,double>& prob,string& geneName, string& specName)
+{
+	//cout << "GammaManager::estimateLeafAlpha" << endl;
+	Gamma* gamma_og=gammaSet[ogid];
+	Gamma::Node* m=gamma_og->getGeneNode(geneName,specName);
+	if(m->alpha==NULL)
+	{
+		m->alpha=new Matrix(1,maxClusterCnt);
+	}
+	double normTerm=0;
+	if(ogid==3946) //1585|| ogid==2178|| ogid==2894)
+    	{
+		cout << "Stop here for OGID 3946" << endl;
+	} 
+	for(map<int,double>::iterator pIter=prob.begin();pIter!=prob.end();pIter++)
+	{
+		double pval=pIter->second;
+		normTerm=normTerm+pval;
+	}
+	for(map<int,double>::iterator pIter=prob.begin();pIter!=prob.end();pIter++)
+	{
+		double pval=pIter->second;
+		//pval=pval/normTerm;
+		if(pval<0)
+		{
+		 	cout <<"Posterior is negative for  "<< geneName <<" species " << specName << "cluster id "  << pIter->first << " pval=" << pval << endl;
+		}
+		if(ogid==3946)
+		{
+			cout << pIter->first << "\t" << pval << endl;
+		}
+		m->alpha->setValue(pval,0,pIter->first);
+	}
+	if(ogid==3946) 
+        {
+                cout << "Leaf alpha: " <<specName <<" " << m->name << endl;
+                m->alpha->showMatrix();
+        }
+	return 0;
+}
+
 int 
 GammaManager::estimateNonLeafPosterior()
 {
 	for(map<int,Gamma*>::iterator gIter=gammaSet.begin();gIter!=gammaSet.end();gIter++)
 	{
 		Gamma* gamma_og=gIter->second;
-		showGammas=false;
-		if(gIter->first==20057|| gIter->first==13692)
+		//cout <<"Now showing " << gIter->first << endl;
+		if(gIter->first==5236)
 		{
-			//showGammas=true;
 			cout <<"Stop here" << endl;
+			gamma_og->showTree();
+			showGammas=true;
 		}
-		estimateNonLeafPosterior(gamma_og->getRoot());
+		else
+		{
+			showGammas=false;
+		}
+		estimateNonLeafPosteriorAlpha(gamma_og->getRoot());
+		estimateNonLeafPosteriorBeta(gamma_og->getRoot());
+		double ll=0;
+		estimateNonLeafPosteriorGamma(gamma_og->getRoot(),ll);
+		gamma_og->ll=ll;
+	}
+	return 0;
+}
+
+int
+GammaManager::estimateNonLeafPosteriorAlpha(Gamma::Node* node)
+{
+	if(node==NULL)
+	{
+		return 0;
+	}
+	if(node->leftchild==NULL && node->rightchild==NULL)
+	{
+		return 0;
+	}
+	if(node->alpha==NULL)
+	{
+		node->alpha=new Matrix(1,maxClusterCnt);
+	}
+	if(node->leftchild!=NULL)
+	{
+		estimateNonLeafPosteriorAlpha(node->leftchild);
+	}
+	if(node->rightchild!=NULL)
+	{
+		estimateNonLeafPosteriorAlpha(node->rightchild);
+	}
+	double sum=0;
+	for(int r=0;r<maxClusterCnt;r++)
+	{
+		double leftval=0;
+		if(node->leftchild!=NULL && node->leftchild->alpha!=NULL)
+		{
+			if(node->leftchild->nodeType==1)
+			{
+				Matrix* conditional=spdistMgr->getConditional(node->leftchild->species);
+				for(int c=0;c<maxClusterCnt;c++)
+				{
+					double lval=node->leftchild->alpha->getValue(0,c);
+					if(lval<0)
+					{
+						cout << node->leftchild->name << "\t" << lval << endl;
+					}
+					
+					/*if(leftval==1)
+					{
+						leftval=lval*conditional->getValue(r,c);	
+					}
+					else
+					{*/
+						leftval=leftval+(lval*conditional->getValue(r,c));	
+					//}
+				}
+			}
+			else
+			{
+				//If the leftchild is a duplication node, then it already has the result of what should be here. So just use it.
+				leftval=node->leftchild->alpha->getValue(0,r);
+			}
+		}	
+		double rightval=0;	
+		if(node->rightchild!=NULL && node->rightchild->alpha!=NULL)
+		{
+			if(node->rightchild->nodeType==1)
+			{
+				Matrix* conditional=spdistMgr->getConditional(node->rightchild->species);
+				for(int c=0;c<maxClusterCnt;c++)
+				{
+					double rval=node->rightchild->alpha->getValue(0,c);
+					if(rval<0)
+                                        {
+                                                cout << node->rightchild->name << "\t" << rval << endl;
+                                        }
+					/*if(rightval==1)
+					{
+						rightval=rval*conditional->getValue(r,c);	
+					}
+					else
+					{*/
+						rightval=rightval+(rval*conditional->getValue(r,c));
+						if(rval*conditional->getValue(r,c)<0)
+						{
+							//cout << (rval*conditional->getValue(r,c)) << "\t" << rval << "\t" << conditional->getValue(r,c) << endl;
+						}
+					//}
+				}
+			}
+			else
+			{
+				rightval=node->rightchild->alpha->getValue(0,r);
+			}
+		}
+		if(node->leftchild!=NULL && node->leftchild->alpha!=NULL && node->rightchild!=NULL && node->rightchild->alpha!=NULL)
+		{
+			node->alpha->setValue(leftval*rightval,0,r);
+			sum=sum+(leftval*rightval);
+			if(leftval*rightval<0)
+			{
+				//cout << "alpha " << node->name << "\t" << node->leftchild->name << "\t" << leftval << "\t" << node->rightchild->name << "\t" << rightval << endl;
+			}
+		}
+		else 
+		{
+			if(node->leftchild!=NULL && node->leftchild->alpha!=NULL)
+			{
+				node->alpha->setValue(leftval,0,r);
+				sum=sum+leftval;
+			}
+			if(node->rightchild!=NULL && node->rightchild->alpha!=NULL)
+			{
+				node->alpha->setValue(rightval,0,r);
+				sum=sum+rightval;
+			}
+		}
+	}
+	//if sum is 0, this means this is an internal node that has nothing in it. So we should just delete it
+	//Further we should update the parent of this node so that it not called again.
+	if(sum==0)
+	{
+		delete node->alpha;
+		Gamma::Node* parent=node->parent;
+		if(parent==NULL)
+		{
+			cout <<"This whole OG should be deleted! Remove and restart" << endl;
+			cout << "Node name " << node->name << endl;
+			if(node->rightchild!=NULL)
+			{
+				cout << "Right child name " << node->rightchild->name << endl;
+			}
+			if(node->leftchild!=NULL)
+                        {
+                                cout << "left child name " << node->rightchild->name << endl;
+                        }
+			//exit(0);
+		}
+		if(parent->leftchild==node)
+		{
+			parent->leftchild=NULL;
+		}
+		else if(parent->rightchild==node)
+		{
+			parent->rightchild=NULL;
+		}
+	}
+	return 0;
+}
+
+int
+GammaManager::estimateNonLeafPosteriorGamma(Gamma::Node* g,double& ll)
+{
+	if(g->alpha==NULL || g->beta==NULL)
+	{
+		return 0;
+	}
+	if(g->nodeType==2)
+	{	
+		if(g->leftchild!=NULL)
+		{
+			estimateNonLeafPosteriorGamma(g->leftchild,ll);
+		}
+		if(g->rightchild!=NULL)
+		{
+			estimateNonLeafPosteriorGamma(g->rightchild,ll);
+		}
+		return 0;
+	}
+	if(g->gamma==NULL)
+	{
+		if(g->parent==NULL)
+		{
+			g->gamma=new Matrix(1,maxClusterCnt);
+		}
+		else
+		{
+			g->gamma=new Matrix(maxClusterCnt,maxClusterCnt);
+		}
+	}
+	Matrix* conditional=spdistMgr->getConditional(g->species);
+	if(g->parent==NULL)
+	{
+		
+		ll=0;
+		if(g->normTerm==NULL)
+		{
+			g->normTerm=new Matrix(1,maxClusterCnt);
+		}
+		for(int i=0;i<maxClusterCnt;i++)
+		{
+			double v=g->alpha->getValue(0,i);
+			double p=v*conditional->getValue(0,i);
+			if(p<0 || isnan(p))
+			{
+				cout << "p is set" << g->name << "\t" << p << "\t" << v << endl;
+			}
+			ll=ll+p;
+			g->gamma->setValue(p,0,i);
+		}
+		for(int i=0;i<maxClusterCnt;i++)
+		{
+			double v=g->gamma->getValue(0,i);
+			v=v/ll;
+			if(isnan(v)|| isinf(v))
+			{
+				cout <<"Found bad prob " << endl;
+			}
+			g->gamma->setValue(v,0,i);
+			g->normTerm->setValue(v,0,i);
+		}
+	}
+	else
+	{
+		for(int i=0;i<maxClusterCnt;i++)
+		{
+			for(int j=0;j<maxClusterCnt;j++)
+			{
+				double pval=conditional->getValue(i,j);
+				double b=g->beta->getValue(0,i);
+				double a=g->alpha->getValue(0,j);
+				double v=b*pval*a;
+				v=v/ll;
+				g->gamma->setValue(v,i,j);
+			}
+		}
+		//Also update the normTerm
+		if(g->normTerm==NULL)
+		{
+			g->normTerm=new Matrix(1,maxClusterCnt);
+		}
+		for(int j=0;j<maxClusterCnt;j++)
+		{
+			double s=0;
+			for(int i=0;i<maxClusterCnt;i++)
+			{
+				double v=g->gamma->getValue(i,j);
+				s=s+v;
+			}
+			g->normTerm->setValue(s,0,j);
+		}
+		if(showGammas)
+		{
+			cout <<"node name " << g->name << endl;
+			g->gamma->showMatrix();
+		}
+	}
+	if(g->leftchild!=NULL)
+	{
+		estimateNonLeafPosteriorGamma(g->leftchild,ll);
+	}
+	if(g->rightchild!=NULL)
+	{
+		estimateNonLeafPosteriorGamma(g->rightchild,ll);
+	}
+	return 0;
+}
+
+
+int
+GammaManager::estimateNonLeafPosteriorBeta(Gamma::Node* g)
+{
+	if(g->beta==NULL)
+	{
+		g->beta=new Matrix(1,maxClusterCnt);
+	}
+	if(g->parent==NULL)
+	{
+		if(g->leftchild!=NULL)
+		{
+			estimateNonLeafPosteriorBeta(g->leftchild);
+		}
+		if(g->rightchild!=NULL)
+		{
+			estimateNonLeafPosteriorBeta(g->rightchild);
+		}
+		return 0;
+	}
+	Gamma::Node* sibling=g->parent->leftchild;
+	if(sibling==g)
+	{
+		sibling=g->parent->rightchild;
+	}
+	if(g->parent->parent==NULL)
+	{
+		Matrix* rootprior=spdistMgr->getConditional(spdistMgr->getRoot()->name);
+		Matrix* conditional=NULL;
+		if(sibling!=NULL)
+		{
+			conditional=spdistMgr->getConditional(sibling->species);
+		}
+		
+		for(int i=0;i<maxClusterCnt;i++)
+		{
+			double bval=0;
+			for(int j=0;j<maxClusterCnt;j++)
+			{
+				double pi=rootprior->getValue(0,i);
+				if(sibling!=NULL && sibling->alpha!=NULL)
+				{
+					double pval=conditional->getValue(i,j);
+					if(sibling->nodeType==1)
+					{
+						bval=bval+(pi*sibling->alpha->getValue(0,j)*pval);
+					}
+					else 
+					{
+						if(i==j)
+						{
+							bval=pi*sibling->alpha->getValue(0,j);
+						}
+					}
+				}
+				else
+				{
+					bval=pi;
+				}
+			}
+			g->beta->setValue(bval,0,i);
+		}
+	}
+	else 
+	{
+		Matrix* parentcond=spdistMgr->getConditional(g->parent->species);
+		Matrix* conditional=NULL;
+		if(sibling!=NULL)
+		{
+			conditional=spdistMgr->getConditional(sibling->species);
+		}
+		for(int i=0;i<maxClusterCnt;i++)
+		{
+			double bval=0;
+			for(int j=0;j<maxClusterCnt;j++)
+			{
+				double s=0;
+				for(int k=0;k<maxClusterCnt;k++)
+				{
+					double pval=parentcond->getValue(k,i);
+					if(g->parent->nodeType==1)
+					{
+						s=s+(g->parent->beta->getValue(0,k)*pval);
+					}
+					else
+					{
+						if(k==i)
+						{
+							s=g->parent->beta->getValue(0,k);
+						}
+					}
+				}
+				if(sibling!=NULL&& sibling->alpha!=NULL)
+				{
+					double pval=conditional->getValue(i,j);
+					double v=pval*sibling->alpha->getValue(0,j);
+					if(sibling->nodeType==1)
+					{
+						bval=bval+(v*s);
+					}
+					else	
+					{
+						if(i==j)
+						{
+							bval=s*sibling->alpha->getValue(0,j);	
+						}
+					}
+				}
+				else
+				{
+					bval=s;
+				}
+			}
+			g->beta->setValue(bval,0,i);
+		}
+	}
+	if(g->leftchild!=NULL)
+	{
+		estimateNonLeafPosteriorBeta(g->leftchild);
+	}
+	if(g->rightchild!=NULL)
+	{
+		estimateNonLeafPosteriorBeta(g->rightchild);
 	}
 	return 0;
 }
@@ -209,8 +658,7 @@ GammaManager::estimateNonLeafPosterior(Gamma::Node* node)
 					}
 					if(isnan(unnormVal) || isinf(unnormVal))
 					{
-						cout <<"Posterior is nan/inf for  "<< node->name <<" species " << node->species<< " cluster id "  << c
-						<< " pval=" << unnormVal << " prior=" << prior << endl;
+						cout <<"Posterior is nan/inf for  "<< node->name <<" species " << node->species<< " cluster id "  << c << " pval=" << unnormVal << " prior=" << prior << endl;
 					}
 				}
 				node->gamma->setValue(unnormVal,r,c);
@@ -249,14 +697,29 @@ GammaManager::getLeafLikelihood_store(int ogid,string& geneName)
 double
 GammaManager::getAllNodeScore()
 {
+	//cout << "GammaManager::getAllNodeScore()" << endl;
 	double totalScore=0;
 	for(map<int,Gamma*>::iterator gIter=gammaSet.begin();gIter!=gammaSet.end();gIter++)
 	{
 		double score=0;
-		score=gIter->second->root->normTerm->getValue(0,0);
-		totalScore=totalScore+log(score);
-		score=getNodeScore(gIter->second->root);
-	//	totalScore=totalScore+score;
+		//score=gIter->second->root->normTerm->getValue(0,0);
+		Matrix* conditional=spdistMgr->getConditional(gIter->second->root->species);
+		Gamma::Node* g=gIter->second->root;
+		for(int i=0;i<maxClusterCnt;i++)
+		{
+			double v=g->alpha->getValue(0,i);
+			score=score+(v*conditional->getValue(0,i));
+			score=score+v;
+		}
+		//totalScore=totalScore+log(score);
+		if(isnan(log(gIter->second->ll)))
+		{
+			cout << gIter->first << "\t" << gIter->second->ll << endl;
+			
+		}
+		totalScore=totalScore+log(gIter->second->ll);
+		//score=getNodeScore(gIter->second->root);
+		//totalScore=totalScore+score;
 	}
 	return totalScore;
 }
@@ -325,12 +788,8 @@ GammaManager::getAllClusterAssignments(map<int,map<string,int>*>& allClusterAssi
 	for(map<int,Gamma*>::iterator gIter=gammaSet.begin();gIter!=gammaSet.end();gIter++)
 	{
 		int ogid=gIter->first;
-		if(gIter->first==20057|| gIter->first==25639)
-		{
-			cout <<"Stop here" << endl;
-		}
 		Gamma* gamma=gIter->second;
-		if(gIter->first==1325)
+		if(gIter->first==8612)
 		{
 			gamma->showTree();
 		}
@@ -353,8 +812,8 @@ GammaManager::getAllClusterAssignments(map<int,map<string,int>*>& allClusterAssi
 			parentCAssign[key]=aIter->second;
 			extantCAssign[key]=aIter->second;
 		}
-		spdistMgr->getExtantClustering(parentCAssign,extantCAssign);
-		updateTransitionMatrix_ML(gamma->root,-1);
+		//spdistMgr->getExtantClustering(parentCAssign,extantCAssign);
+		//updateTransitionMatrix_ML(gamma->root,-1);
 		bool dup=hasDuplicate(gamma->root);
 		if(!dup && revisit)
 		{
@@ -397,6 +856,32 @@ GammaManager::getAllClusterAssignments_Grouped(map<int,map<string,int>*>& allClu
 		int dupID=1;
 		getMaximalAssignment_Grouped(gamma->root,maximalAssignment,dupID);
 		allClusterAssignments[gIter->first]=maximalAssignment;
+	}
+	return 0;
+}
+
+int
+GammaManager::showAssignments(const char* aFName)
+{
+	ofstream oFile(aFName);
+	//First clean up
+	for(map<int,Gamma*>::iterator gIter=gammaSet.begin();gIter!=gammaSet.end();gIter++)
+	{
+		int ogid=gIter->first;
+		Gamma* gamma=gIter->second;
+		if(gIter->first==1325)
+		{
+			gamma->showTree();
+		}
+		int dupID=1;
+		string assignment;
+		int switchcnt=0;
+		int total=0;
+		showMaximalAssignment_Grouped(gamma->root,assignment,-1,dupID,switchcnt,total);
+		int lossCnt_2=gtMgr.countLossForTree(ogid);
+		int lossCnt=getLoss(gamma->root);
+		oFile << "OG:\t"<< ogid  << "\t" << switchcnt<< "\t" << total << "\tloss=" << lossCnt <<"\tloss_genetree="<< lossCnt_2<< endl << assignment << endl;
+		assignment.clear();
 	}
 	return 0;
 }
@@ -487,10 +972,10 @@ GammaManager::getMaximalAssignment(Gamma::Node* anode,map<string,int>* assignmen
 			double maxScore=0;
 			int maxClusterID=-1;
 			Matrix* margp=anode->normTerm;
-			if(margp->getColCnt()==1)
+			/*if(margp->getColCnt()==1)
 			{
 				margp=anode->gamma;
-			}
+			}*/
 			for(int c=0;c<margp->getColCnt();c++)
 			{
 				double val=margp->getValue(0,c);
@@ -741,6 +1226,71 @@ GammaManager::getMaximalAssignment_Grouped(Gamma::Node* anode,map<string,int>* a
 
 
 int
+GammaManager::showMaximalAssignment_Grouped(Gamma::Node* anode,string& assignment,int parentAssign,int dupID,int& switchcnt,int& total)
+{
+	if(anode==NULL)
+	{
+		return 0;
+	}
+	if(strcmp(anode->name.c_str(),"Kwal6.520")==0)
+	{	
+		cout << "Stop here " << endl;
+	}
+	int localDupID=dupID;
+	if(anode->nodeType==1)
+	{
+		localDupID=dupID;
+		int maxClusterID=-1;
+		if(anode->normTerm!=NULL)
+		{
+			double maxScore=0;
+			Matrix* margp=anode->normTerm;
+			if(margp->getColCnt()==1)
+			{
+				margp=anode->gamma;
+			}
+			for(int c=0;c<margp->getColCnt();c++)
+			{
+				double val=margp->getValue(0,c);
+				if(val>maxScore)
+				{
+					maxScore=val;
+					maxClusterID=c;
+				}
+			}
+		}
+		if(parentAssign!=-1)
+		{
+			if(maxClusterID!=parentAssign)
+			{
+				switchcnt++;
+			}
+			total++;
+			if(strstr(anode->name.c_str(),"Anc")!=NULL)
+			{
+				char temp[256];
+				sprintf(temp,"%d:%s:%s\t%d\t%d\n",localDupID,anode->species.c_str(),anode->species.c_str(),maxClusterID,parentAssign);
+				assignment.append(temp);
+			}
+			else
+			{
+				char temp[256];
+				sprintf(temp,"%d:%s:%s\t%d\t%d\n",localDupID,anode->species.c_str(),anode->name.c_str(),maxClusterID,parentAssign);
+				assignment.append(temp);
+			}
+		}
+		showMaximalAssignment_Grouped(anode->leftchild,assignment,maxClusterID,localDupID,switchcnt,total);
+		showMaximalAssignment_Grouped(anode->rightchild,assignment,maxClusterID,localDupID,switchcnt,total);
+	}
+	else 
+	{
+		showMaximalAssignment_Grouped(anode->leftchild,assignment,parentAssign,localDupID,switchcnt,total);
+		showMaximalAssignment_Grouped(anode->rightchild,assignment,parentAssign,localDupID+1,switchcnt,total);
+	}
+	return 0;
+}
+
+int
 GammaManager::getMaximalConditionalAssignment(Gamma::Node* anode,map<string,int>* assignment,int dupID, int parentClusterID)
 {
 	if(anode==NULL)
@@ -903,6 +1453,11 @@ GammaManager::revisitLeafAssignments(Gamma::Node* anode, map<string,int>& cluste
 				gvals->setValue(src,r,c_MajorityAncestor);
 				gvals->setValue(dest,r,c_postClusterAssign);
 			}
+			Matrix* normT=anode->normTerm;
+			double oldval=normT->getValue(0,c_postClusterAssign);
+			double newval=normT->getValue(0,c_MajorityAncestor);
+			normT->setValue(newval,0,c_postClusterAssign);
+			normT->setValue(oldval,0,c_MajorityAncestor);
 			//Also keep a tab of which clusters may switch per species
 			Matrix* cnt=NULL;
 			if(clusterFlipCnt.find(anode->species)==clusterFlipCnt.end())
@@ -1064,27 +1619,8 @@ GammaManager::updateTransitionMatrix(Gamma::Node* node)
 int
 GammaManager::updateTransitionMatrix(Gamma::Node* node)
 {
-	if(node->normTerm==NULL)
-	{
-		return 0;
-	}
 	if(node->nodeType==2)
 	{
-		//Then the marginal is simply the marginal of its parent
-		if(node->parent==NULL)
-		{
-			return 0;
-		}
-		Matrix* amarg=node->parent->normTerm;
-		if(amarg->getColCnt()==1)
-		{
-			amarg=node->parent->gamma;
-		}
-		//If I am a node of type 2, the just inherit the marginal from the parent
-		for(int r=0;r<amarg->getColCnt();r++)
-		{
-			node->normTerm->setValue(amarg->getValue(0,r),0,r);
-		}
 		if(node->leftchild!=NULL)
 		{
 			updateTransitionMatrix(node->leftchild);
@@ -1095,38 +1631,14 @@ GammaManager::updateTransitionMatrix(Gamma::Node* node)
 		}
 		return 0;
 	}
+	//Only nodes that have alpha and beta are allowed to contribute
+	if(node->alpha==NULL || node->beta==NULL)
+	{
+		return 0;
+	}
 	Matrix* condmatrix=spdistMgr->getConditional(node->species);
 	Matrix* gval=node->gamma;
 	Matrix* parentmarg=NULL;
-	//use the norm term to store the marginals of this node, which will be used in the child node
-	if(node->parent!=NULL)
-	{
-		parentmarg=node->parent->normTerm;
-		if(parentmarg->getColCnt()==1)
-		{
-			parentmarg=node->parent->gamma;
-		}
-		for(int c=0;c<gval->getColCnt();c++)
-		{
-			double anormterm=0;
-			for(int r=0;r<gval->getRowCnt();r++)
-			{	
-				double g=gval->getValue(r,c);
-				double margp=parentmarg->getValue(0,r);
-				double jointp=g*margp;
-				if(isnan(jointp) || isinf(jointp))
-				{
-					cout <<"Posterior is nan/inf for  "<< node->name <<" species " << node->species<< " cluster id "  << c
-					<< " gamma=" << g<< " marg=" << margp<< endl;
-				}
-				gval->setValue(jointp,r,c);
-				anormterm=anormterm+jointp;
-			}
-			node->normTerm->setValue(anormterm,0,c);
-		}
-		//node->normTerm->showMatrix();
-		//node->gamma->showMatrix();
-	}
 	for(int c=0;c<gval->getColCnt();c++)
 	{
 		for(int r=0;r<gval->getRowCnt();r++)
@@ -1147,7 +1659,6 @@ GammaManager::updateTransitionMatrix(Gamma::Node* node)
 	return 0;
 }
 
-
 int 
 GammaManager::reestimateTransitionProbability()
 {
@@ -1166,7 +1677,6 @@ GammaManager::reestimateTransitionProbability()
 	
 	return 0;
 }
-
 
 int
 GammaManager::updateTransitionMatrix_GammaFix(Gamma::Node* node)
@@ -1500,4 +2010,37 @@ GammaManager::sortIndices(Matrix* params,int parentID,vector<int>* sortedClustID
 		}
 	}
 	return 0;
+}
+
+int
+GammaManager::getLoss(Gamma::Node* n)
+{
+	if(n->leftchild==NULL && n->rightchild==NULL)
+	{
+		//This is a leaf;
+		return 0;
+	}
+	int loss=0;
+	int leftchildloss=0;
+	if(n->leftchild!=NULL)
+	{
+		leftchildloss=getLoss(n->leftchild);
+	}
+	int rightchildloss=0;
+	if(n->rightchild!=NULL)
+	{
+		rightchildloss=getLoss(n->rightchild);
+	}
+	if(n->leftchild==NULL && n->rightchild!=NULL)
+	{
+	//	cout <<"Found loss in " << n->name << endl;
+		loss=1;
+	}
+	if(n->leftchild!=NULL && n->rightchild==NULL)
+	{
+	//	cout <<"Found loss in " << n->name << endl;
+		loss=1;
+	}
+	loss=loss+leftchildloss+rightchildloss;
+	return loss;
 }

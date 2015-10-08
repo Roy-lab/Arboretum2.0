@@ -13,6 +13,7 @@ class GeneTree
 	string species;
 	string name;
 	int nodeType;
+	int nodeID;
 	bool exclude;
 };
 #endif

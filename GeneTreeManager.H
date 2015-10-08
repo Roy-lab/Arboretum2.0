@@ -1,7 +1,6 @@
 #ifndef _GENETREEMGR_
 #define _GENETREEMGR_
 #include <map>
-#define GENETREEPATH "data/TREES"
 using namespace std;
 class GeneTree;
 class SpeciesDistManager;
@@ -23,6 +22,7 @@ class GeneTreeManager
 		return totalAdditionalParents;
 	}
 	int showTotalAdditionalParentDist();
+	int countLossForTree(int);
 	private:
 	int showTree(GeneTree*);
 	int pruneTree(GeneTree*);
@@ -35,9 +35,11 @@ class GeneTreeManager
 	GeneTree* readTreeFromFile(const char* treePath);
 	int addKpolGene(GeneTree*,string&);
 	GeneTree* isKpolAnc(GeneTree* gtree,string& parentName);
+	int countLossForTree(GeneTree*);
 	map<int,GeneTree*> genetreeSet;
 	SpeciesDistManager::Species* speciestreeRoot;
 	SpeciesDistManager* sdMgr;
+	//SK: variable for gene tree direrctory, to be used if readung in from files instead of the MappedOrthogroupReader object
 	char dirName[1024];
 	int totalAdditionalParents;
 	map<string,int> addedParents;

@@ -1,3 +1,22 @@
+/*
+Arboretum: An algorithm to cluster functional genomesomics data from multiple species
+    Copyright (C) 2013 Sushmita Roy sushroy@gmail.com
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+#include <iostream>
+
 #include <iostream>
 #include <fstream>
 #include <map>
@@ -10,6 +29,11 @@
 #include "GeneTree.H"
 #include "NewickReader.H"
 #include "GeneTreeManager.H"
+//SK: read the global varible from Framework.C to define the directory for the gene trees
+extern char* GENETREEDIR;
+//SK: read the global varible from Framework.C to define if the gene trees should be defined from gene tree files or not
+extern bool GENFROMFILE;
+//SK: these varibles determine how the genetrees are read in to the GeneTreeManager in the getGeneTree function
 
 GeneTreeManager::GeneTreeManager()
 {
@@ -18,7 +42,6 @@ GeneTreeManager::GeneTreeManager()
 
 GeneTreeManager::~GeneTreeManager()
 {
-
 }
 
 int 
@@ -42,12 +65,11 @@ GeneTreeManager::setGeneTreeDir(const char* treeDirName)
 	return 0;
 }
 
-
-
 //We will assume that there is no more than 1 duplication event
-GeneTree*
+GeneTree* 
 GeneTreeManager::generateTree(MappedOrthogroup* mor)
 {
+	//cout << "touch GeneTreeManager::generateTree\n" ;
 	//We will descend down the species tree until we reach the leaf nodes.
 	//At the leaf node we will ask how many copies/genes does the species node have
 	SpeciesDistManager::Species* dupSpecies=NULL;
@@ -55,29 +77,30 @@ GeneTreeManager::generateTree(MappedOrthogroup* mor)
 	GeneTree* tree=createTree(dupSpecies,speciestreeRoot,mor,1);
 	int ogid=mor->getID();
 	genetreeSet[ogid]=tree;
-	if(ogid==1339|| ogid==13692)
+	if(ogid==1339|| ogid==11)
 	{
 		showTree(tree);
 	}
 	return tree;
 }
 
-GeneTree*
+GeneTree* 
 GeneTreeManager::generateTreeFromFile(MappedOrthogroup* mor)
 {
 	int ogid=mor->getID();
 	char treePath[1024];
-	sprintf(treePath,"%s/%d.tre",GENETREEPATH,ogid);
-	if(ogid==1339|| ogid==13692 || ogid==4597)
-	{
-		cout << "Stop here" << endl;
-	}
+	//SK: read in directory path for the .tre file from the global GENETREEDIR function
+	sprintf(treePath,"%s/%d.tre",GENETREEDIR,ogid);
+	cout << "Starting ogid " << ogid << endl;
 	GeneTree* tree=readTreeFromFile(treePath);
 	//cout << "Pruning " << ogid  << endl;
 	//showTree(tree);
 	pruneTree(tree);
 	//cout << "After pruning " << ogid << endl;
-	//showTree(tree);
+	if(ogid==95 || ogid==3063)
+        {
+		//showTree(tree);
+	}
 	//getSpeciesName(tree);
 	map<string,int> ancestors;
 	getSpeciesName(tree,ancestors);
@@ -102,17 +125,12 @@ GeneTreeManager::generateTreeFromFile(MappedOrthogroup* mor)
 			tree->parent=NULL;
 		}
 	}
-//	cout <<"Now inserting " << ogid << endl;
+	//cout << "Now inserting " << ogid << endl;
 	insertTree(tree);
-//	showTree(tree);
 	//Need to make sure that we get to the parent
 	while(tree->parent!=NULL)
 	{
 		tree=tree->parent;
-	}
-	if(ogid==1339|| ogid==13692 || ogid==4597)
-	{
-		showTree(tree);
 	}
 	SpeciesDistManager::Species* specroot=sdMgr->getRoot();
 	//Add additional parents
@@ -153,6 +171,7 @@ GeneTreeManager::generateTreeFromFile(MappedOrthogroup* mor)
 		totalAdditionalParents++;
 	}
 	setNodeType(tree);
+	genetreeSet[ogid]=tree;
 	//showTree(tree);
 	//Check if there are any Kpol genes here
 	GeneMap* kpol=mor->getSpeciesHits("Kpol");
@@ -167,6 +186,51 @@ GeneTreeManager::generateTreeFromFile(MappedOrthogroup* mor)
 		addKpolGene(tree,(string&)kpolGenes.begin()->first);
 	}
 	return tree;
+}
+
+int GeneTreeManager::countLossForTree(int ogid)
+{
+	GeneTree* gtree=NULL;
+	if(genetreeSet.find(ogid)==genetreeSet.end())
+	{	
+		cout <<"No tree with ogid " << ogid << endl;
+		exit(0);
+	}
+	gtree=genetreeSet[ogid];	
+	int loss=countLossForTree(gtree);
+	return loss;
+}
+
+int
+GeneTreeManager::countLossForTree(GeneTree* tree)
+{
+	int loss=0;
+	if(tree->leftchild==NULL && tree->rightchild==NULL)
+	{
+		return 0;
+	}
+	int leftchildloss=0;
+	int rightchildloss=0;
+	if(tree->rightchild!=NULL)
+	{
+		rightchildloss=countLossForTree(tree->rightchild);	
+	}
+	if(tree->leftchild!=NULL)
+	{
+		leftchildloss=countLossForTree(tree->leftchild);
+	}
+	if(tree->leftchild==NULL && tree->rightchild!=NULL)
+	{
+	//	cout <<"Found loss in " << tree->name << endl;
+		loss=1;
+	}
+	if(tree->leftchild!=NULL && tree->rightchild==NULL)
+	{
+	//	cout <<"Found loss in " << tree->name << endl;
+		loss=1;
+	}
+	loss=loss+leftchildloss+rightchildloss;
+	return loss;
 }
 
 int
@@ -984,15 +1048,17 @@ GeneTreeManager::getGeneTree(MappedOrthogroup* mor)
 	{
 		gtree=genetreeSet[ogid];
 	}
-	else
-	{
-		//gtree=generateTree(mor);
-		gtree=generateTreeFromFile(mor);
+	else{
+		//SK: use the global boolean GENFROMFILE variable defined at the top of this file from Framework.C
+		//SK: if it is false, generate trees from the mor object
+		if(!GENFROMFILE)gtree=generateTree(mor);
+		//SK: if it is true generate it from a file
+		else if(GENFROMFILE)gtree=generateTreeFromFile(mor);
 	}
 	return gtree;
 }	
 
-int
+int 
 GeneTreeManager::addKpolGene(GeneTree* gtree,string& geneName)
 {
 	string kpolname("Kpol");
@@ -1016,7 +1082,7 @@ GeneTreeManager::addKpolGene(GeneTree* gtree,string& geneName)
 	return 0;
 }
 
-GeneTree*
+GeneTree* 
 GeneTreeManager::isKpolAnc(GeneTree* gtree,string& parentName)
 {
 	GeneTree* hit=NULL;

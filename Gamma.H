@@ -30,8 +30,11 @@ class Gamma
 		Node* parent;
 		//This is 2 for duplication and 1 for speciation
 		int nodeType;
+		int nodeID;
 		Matrix* normTerm;
 		Matrix* gamma;
+		Matrix* alpha;
+		Matrix* beta;
 		bool hasData;
 		map<int,double>* dataLL;
 		bool excludeFlag;
@@ -42,6 +45,7 @@ class Gamma
 	int showTree();
 	map<int,double>* getDataLL(string&);
 	string& getDupAncestor();
+	double ll;
 	private:
 	Gamma::Node* initSubtree(GeneTree* gtreenode);
 	Gamma::Node* initSubtree(GeneTree* gtreenode,string& rootname);
@@ -52,6 +56,5 @@ class Gamma
 	int maxClusterCnt;
 	int nodeID;
 	string dupAncName;
-	
 };
 #endif

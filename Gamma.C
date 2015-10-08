@@ -1,4 +1,21 @@
+/*
+Arboretum: An algorithm to cluster functional genomesomics data from multiple species
+    Copyright (C) 2013 Sushmita Roy sushroy@gmail.com
 
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+#include <iostream>
 #include <string.h>
 #include "GeneTree.H"
 #include "Matrix.H"
@@ -8,12 +25,12 @@ Gamma::Gamma()
 {
 	dupAncName.clear();	
 	nodeID=0;
+	root=NULL;
 }
 
 Gamma::~Gamma()
 {
 }
-
 
 int 
 Gamma::setGeneClusterID(string& geneName,string& specName,int clusterID)
@@ -51,17 +68,21 @@ Gamma::initSubtree(GeneTree* gtreenode)
 	node->hasData=false;
 	node->dataLL=NULL;
 	node->parent=NULL;
+	node->nodeID=0;
 	node->excludeFlag=gtreenode->exclude;
 	node->species.append(gtreenode->species);
 	char nodeName[1024];
 	if(strstr(node->species.c_str(),"Anc")!=NULL)
 	{
 		sprintf(nodeName,"%s_%d",gtreenode->name.c_str(),nodeID);
+		node->nodeID=nodeID;
 		nodeID++;
 	}
 	else
 	{
 		sprintf(nodeName,"%s",gtreenode->name.c_str());
+		//node->nodeID=nodeID;
+                //nodeID++;
 	}
 	node->name.append(nodeName);
 	//if(gtreenode->nodeType==1)
@@ -77,6 +98,8 @@ Gamma::initSubtree(GeneTree* gtreenode)
 		}
 		node->gamma->setAllValues(0);
 		node->normTerm=NULL;
+		node->alpha=NULL;
+		node->beta=NULL;
 	//}
 	geneMap[node->name]=node;
 	node->nodeType=gtreenode->nodeType;
@@ -124,17 +147,21 @@ Gamma::initSubtree(GeneTree* gtreenode,string& rootname)
 	node->hasData=false;
 	node->dataLL=NULL;
 	node->parent=NULL;
+	node->nodeID=0;
 	node->excludeFlag=gtreenode->exclude;
 	node->species.append(gtreenode->species);
 	char nodeName[1024];
 	if(strstr(node->species.c_str(),"Anc")!=NULL)
 	{
 		sprintf(nodeName,"%s_%d",gtreenode->name.c_str(),nodeID);
+		node->nodeID=nodeID;
 		nodeID++;
 	}
 	else
 	{
 		sprintf(nodeName,"%s",gtreenode->name.c_str());
+		//node->nodeID=nodeID;
+                //nodeID++;
 	}
 	node->name.append(nodeName);
 	//if(gtreenode->nodeType==1)
@@ -152,6 +179,8 @@ Gamma::initSubtree(GeneTree* gtreenode,string& rootname)
 		}
 		node->gamma->setAllValues(0);
 		node->normTerm=NULL;
+		node->alpha=NULL;
+		node->beta=NULL;
 	//}
 	geneMap[node->name]=node;
 	node->nodeType=gtreenode->nodeType;
@@ -280,7 +309,7 @@ Gamma::showTree(Gamma::Node* node)
 	}
 	if(node->leftchild!=NULL)
 	{
-		cout << node->name <<"->left "<< node->leftchild->name << endl;
+		cout << node->name << " " << node->nodeID << "->left " << node->leftchild->name << " " << node->leftchild->nodeID << endl;
 	}
 	else
 	{
@@ -288,7 +317,7 @@ Gamma::showTree(Gamma::Node* node)
 	}
 	if(node->rightchild!=NULL)
 	{
-		cout << node->name <<"->right "<< node->rightchild->name << endl;
+		cout << node->name  << " " << node->nodeID << "->right " << node->rightchild->name << " " << node->rightchild->nodeID << endl;
 	}
 	else
 	{
