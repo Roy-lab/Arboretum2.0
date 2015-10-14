@@ -91,7 +91,7 @@ GeneTreeManager::generateTreeFromFile(MappedOrthogroup* mor)
 	char treePath[1024];
 	//SK: read in directory path for the .tre file from the global GENETREEDIR function
 	sprintf(treePath,"%s/%d.tre",GENETREEDIR,ogid);
-	cout << "Starting ogid " << ogid << endl;
+	//cout << "Starting ogid " << ogid << endl;
 	GeneTree* tree=readTreeFromFile(treePath);
 	//cout << "Pruning " << ogid  << endl;
 	//showTree(tree);

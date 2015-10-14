@@ -202,8 +202,6 @@ SpeciesClusterManager::readSpeciesData(const char* clusterFName,const char* Dir)
         return 0;
 }
 
-
-
 int
 SpeciesClusterManager::initExperts()
 {
@@ -218,7 +216,7 @@ SpeciesClusterManager::initExperts()
                 for(CLUSTERSET_ITER cIter=speciesExpert->begin();cIter!=speciesExpert->end();cIter++)
                 {
                         Expert* e=cIter->second;
-                        int sample=estimateMeanCov(e,(string&)aIter->first,cIter->first);
+			int sample=estimateMeanCov(e,(string&)aIter->first,cIter->first);
                         if(sample<10)
                         {
 				if(strcmp(aIter->first.c_str(),srcSpecies)==0)
@@ -585,12 +583,14 @@ SpeciesClusterManager::estimateMeanCov(Expert* e, string& specName, int clusterI
 	GeneExpManager* exprMgr=speciesExprSet[specName];
 	map<string,int>* speciesGenes=speciesClusterSet_Genewise[specName];
 	vector<double>* expr=exprMgr->getExp(speciesGenes->begin()->first);
+	//cout << speciesGenes->begin()->first << endl;
 	CLUSTERSET* expertSet=speciesExpertSet[specName];
 	int dim=expr->size();
+	//cout << dim << endl;
 	Matrix* mean=e->getMean();
 	if(mean==NULL)
 	{
-		mean=new Matrix(1,dim);
+		mean= new Matrix(1,dim);
 	}
 	double totaldp=0;
 	for(int d=0;d<dim;d++)

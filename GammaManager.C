@@ -88,7 +88,7 @@ GammaManager::initGamma(int ogid, string& geneName, string& specName,int clustID
 		gamma->setMaxClusterCnt(maxClusterCnt);
 		gammaSet[ogid]=gamma;
 		GeneTree* gtree=gtMgr.getGeneTree(mor);
-		cout << "Init from gene tree: " << ogid << endl;
+		//cout << "Init from gene tree: " << ogid << endl;
 		gamma->initUsingGeneTree(gtree);
 		if(gamma->getDupAncestor().length()>0)
 		{

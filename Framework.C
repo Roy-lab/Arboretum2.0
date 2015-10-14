@@ -669,16 +669,6 @@ Framework::inferAncestralClusters(map<int,map<string,int>*>& clusterAssignments)
 				(*clusterCnts)[aIter->second]=(*clusterCnts)[aIter->second]+1;
 			}
 		}
-		
-		/*if(cIter==clusterAssignments.begin())
-		{
-			cout<<"Gene";
-			for(map<string,int>::iterator aIter=extantClustering->begin();aIter!=extantClustering->end();aIter++)
-			{
-				cout <<" " << aIter->first;
-			}
-			cout << endl;
-		}*/
 		if(disp<10)
 		{
 			cout<<cIter->first;
@@ -740,15 +730,6 @@ Framework::inferExtantClusters(map<int,map<string,int>*>& clusterAssignments)
 				(*clusterCnts)[aIter->second]=(*clusterCnts)[aIter->second]+1;
 			}
 		}
-		/*if(cIter==clusterAssignments.begin())
-		{
-			cout<<"Gene";
-			for(map<string,int>::iterator aIter=ancestralClustering->begin();aIter!=ancestralClustering->end();aIter++)
-			{
-				cout <<" " << aIter->first;
-			}
-			cout << endl;
-		}*/
 		if(disp<10)
 		{
 			cout<<cIter->first;
@@ -777,7 +758,6 @@ int
 Framework::estimateClusterTransProb(map<int,map<string,int>*>& clusterAssignments)
 {
 	SpeciesDistManager::Species* root=sdMgr.getRoot();
-	//Estimate prior of the root
 	Matrix* rootparam=root->conditional;
 	rootparam->setAllValues(1e-5);
 	for(map<int,map<string,int>*>::iterator aIter=clusterAssignments.begin();aIter!=clusterAssignments.end();aIter++)
@@ -1391,11 +1371,6 @@ Framework::readExpressionData(const char* aFName,const char* bFName)
 					{
 						speciesExpr=MAPS.find(specOrder[s])->second.find(oIter->first)->second;
 					}
-					if(gIter->first=="YML081W")
-
-					{
-						cout << "found " << specOrder[s] << " : " << oIter->first << endl;
-					}
                                 }
                         }
                         if(speciesExpr.size()>1)
@@ -1475,6 +1450,213 @@ Framework::readExpressionData(const char* aFName,const char* bFName)
 }
 
 int
+Framework::readExpressionDataNonSrc(const char* aFName,const char* bFName)
+{
+        ofstream oFile(bFName);
+        map < string , map <string , vector <string> > > MAPS;
+        vector <string> specOrder;
+        map <int,int> ogidSet;
+        map <string,int> geneCnts;
+        map <string,int> dataCnts;
+        int uniformGenes;
+        int uniformGenesWithExpr;
+        int genesWithExpr=0;
+        ifstream inFile(aFName);
+        int maxGeneCnt=2;
+        char buffer[1024];
+        speciesList.clear();
+        cout << "Reading " << aFName << endl;
+        while(inFile.good())
+        {
+                inFile.getline(buffer,1023);
+                if(strlen(buffer)<=0)
+                {
+                        continue;
+                }
+                char* tok=strtok(buffer,"\t");
+                int tokCnt=0;
+                string specName;
+                string fileName;
+                while(tok!=NULL)
+                {
+                        if(tokCnt==0)
+                        {
+                                specName.append(tok);
+                        }
+                        else if(tokCnt==1)
+                        {
+                                fileName.append(tok);
+                        }
+                        tok=strtok(NULL,"\t");
+                        tokCnt++;
+                }
+                cout << specName << endl;
+                cout << fileName << endl;
+                speciesList[specName]=0;
+                specOrder.push_back(specName);
+                map <string , vector <string> > gexp;
+                ifstream inFileS(fileName.c_str());
+                char bufferS[1024];
+                while(inFileS.good())
+                {
+                        inFileS.getline(bufferS,1023);
+                        if(strlen(bufferS)<=0)
+                        {
+                                continue;
+                        }
+                        char* tokS=strtok(bufferS,"\t");
+                        int tokCntS=0;
+			string geneName;
+                        vector <string> data;
+                        while(tokS!=NULL)
+                        {
+                                if(tokCntS==0)
+                                {
+                                        geneName.append(tokS);
+                                }
+                                else if(tokCntS>0)
+                                {
+                                        string tmp;
+                                        tmp.append(tokS);
+                                        data.push_back(tmp);
+                                }
+                                tokS=strtok(NULL,"\t");
+                                tokCntS++;
+                        }
+                        gexp[geneName]=data;
+                        dataCnts[specName]=data.size();
+                }
+                MAPS[specName]=gexp;
+                cout << specName << "\t" << gexp.size() << endl;
+                cout << gexp.begin()->second.size() << endl;
+                inFileS.close();
+        }
+        inFile.close();
+        int NSpc=specOrder.size();
+        vector <int> NC(NSpc,0);
+        int minSpcCnt=0;
+	map<int,MappedOrthogroup*>& ogSet=mor.getMappedOrthogroups();
+	for(map<int,MappedOrthogroup*>::iterator oIter=ogSet.begin();oIter!=ogSet.end();oIter++)
+	{
+                MappedOrthogroup* grp = oIter->second;
+                if(grp->getOrthoMembers().size()<minSpcCnt)
+		{
+                        cout << "To few members: Leaving ortho group" << grp->getID() << endl;
+                        continue;
+                }
+                else cout << grp->getOrthoMembers().size() << endl;
+                map<int,map<string,string>*>& GS=grp->getGeneSets();
+                int DL=GS.size();
+                vector <string> SpcList;
+                vector < vector <string> > GenesInOGID(DL,vector <string>(NSpc));
+                for(map<int,map<string,string>*>::iterator gsIter=GS.begin();gsIter!=GS.end();gsIter++)
+		{
+                        int DL=gsIter->first;
+                        int spc=0;
+                        map<string,string>* SET=gsIter->second;
+                        for(map<string,string>::iterator igsIter=SET->begin();igsIter!=SET->end();igsIter++)
+			{
+                                SpcList.push_back(igsIter->first);
+                                GenesInOGID[DL][spc]=igsIter->second;
+                                spc++;
+                        }
+                }
+                vector <int> MapS(NSpc,-1);
+                for(int i=0;i<NSpc;i++)
+		{
+                        for(int j=0;j<NSpc;j++)
+			{
+                                if(specOrder[i]==SpcList[j])
+				{
+                                        MapS[i]=j;
+                                }
+                        }
+                }
+		for(int d=0;d<DL;d++)
+		{
+                        int cov=0;
+                        for(int s=0;s<NSpc;s++)
+			{
+                                if(MAPS.find(specOrder[s])==MAPS.end())
+				{
+                                        continue;
+                                }
+				string genename = GenesInOGID[d][MapS[s]]; 
+				if(MAPS.find(specOrder[s])!=MAPS.end() && MAPS.find(specOrder[s])->second.find(genename)!=MAPS.find(specOrder[s])->second.end());
+				{
+                                        cov++;
+                                }
+                        }
+                        if(cov<minSpcCnt)
+			{
+				break;
+			}
+			vector <string> entries;
+			string in;
+			in.append("<nodata>");
+                        for(int s=0;s<NSpc;s++)
+			{
+				string genename = GenesInOGID[d][MapS[s]];
+                                if(MAPS.find(specOrder[s])==MAPS.end())
+				{
+					continue;
+				}				
+                                if(MAPS.find(specOrder[s])->second.find(genename)!=MAPS.find(specOrder[s])->second.end())
+				{
+					vector <string> data=MAPS.find(specOrder[s])->second.find(genename)->second;
+					for(int i=0;i<data.size();i++)
+					{
+						entries.push_back(data[i]);
+					}
+				}
+				else
+				{
+                                        for(int c=0;c<dataCnts.find(specOrder[s])->second;c++)
+					{
+						entries.push_back(in);
+                                        }
+                                }
+                        }
+			double total=0;
+			int numEmpty=0;
+			for(int i=0;i<entries.size();i++)
+			{
+				if(entries[i]!=in)
+				{
+					total += atof(entries[i].c_str());
+				}
+				else
+				{
+					numEmpty++;
+				}
+			}
+			int dat=entries.size()-numEmpty;
+			double ave=(double)total/(double)dat;
+			//SK: now fill a double vector object with the average of present values for missing values, selecting  
+			vector <double> values;
+			for(int i=0;i<entries.size();i++)
+			{
+				if(entries[i]!="<nodata>")
+				{
+					values.push_back(atof(entries[i].c_str()));
+				}
+				else
+				{
+					values.push_back(ave);
+				}
+			}
+			//SK: write out first line of the matrix file.
+			oFile << "OG" << grp->getID();
+			for(int i=0;i<values.size();i++)
+			{
+				oFile << "\t" << values[i];
+			}
+			oFile << endl;
+		}
+	}
+}
+
+int
 Framework::fgconverter(const char* geneexpFName,const char* outsuffix,int logTrans,int dataStart)
 {
 	geneMgr.readGeneData(geneexpFName,logTrans,dataStart);
@@ -1527,8 +1709,6 @@ Framework::createGraph(map<int,int>& nodeIds,map<string,int>& pdIntIds, map<stri
                 {
                         const char* proteinName=aProt->getName();
                         phyNw.addNode(proteinName,Node::PROTEIN,aIter->first,expLevels);
-                        //Edge is added from first node to second node. This is a parent-child reln,
-                        //where geneName is the parent and proteinName is the child
                         phyNw.addEdge(geneName,proteinName);
                 }
         }
@@ -1872,6 +2052,87 @@ Framework::genSpeciesClusters(const char* aFName,const char* outDir)
 }
 
 int
+Framework::genSpeciesClustersNonSrc(const char* aFName,const char* outDir)
+{
+	map<string,int> geneClusterAssignment;
+	ifstream inFile(aFName);
+        char buffer[1024];
+        while(inFile.good())
+        {
+                inFile.getline(buffer,1023);
+                if(strlen(buffer)<=0)
+                {
+                        continue;
+                }
+                char* tok=strtok(buffer,"\t");
+                int tokCnt=0;
+                string geneName;
+                int clusterid=0;
+                while(tok!=NULL)
+                {
+                        if(tokCnt==0)
+                        {
+                                geneName.append(tok);
+                        }
+                        else if(tokCnt==1)
+                        {
+                                clusterid=atoi(tok);
+                        }
+                        tok=strtok(NULL,"\t");
+                        tokCnt++;
+                }
+                geneClusterAssignment[geneName]=clusterid;
+        }
+        inFile.close();
+        map<string,ofstream*> filePtr;
+        int excludeID=0;
+	
+	for(map<string,int>::iterator sIter=speciesList.begin();sIter!=speciesList.end();sIter++)
+	{
+		char bFName[1024];
+		string specName=sIter->first;
+		sprintf(bFName,"%s/%s_initial_clusterassign.txt",outDir,specName.c_str());
+		ofstream* oFile=new ofstream(aFName);
+		filePtr[specName]=oFile;
+        }
+        inFile.close();
+        map<int,MappedOrthogroup*>& ogSet=mor.getMappedOrthogroups();
+        int minSpcCnt=2;
+        for(map<int,MappedOrthogroup*>::iterator oIter=ogSet.begin();oIter!=ogSet.end();oIter++)
+	{
+                MappedOrthogroup* grp = oIter->second;
+                if(grp->getOrthoMembers().size()<2)
+		{
+                        cout << "To few members: Leaving ortho group" << grp->getID() << endl;
+                        continue;
+                }
+                if((excludedOGList.size()>0) && (excludedOGList.find(grp->getID())!=excludedOGList.end()))
+		{
+                        excludeID++;
+                        continue;
+                }
+                map<string,GeneMap*>& Members=grp->getOrthoMembers();
+                map<int,map<string,string>*>& GS=grp->getGeneSets();
+                for(map<int,map<string,string>*>::iterator gsIter=GS.begin();gsIter!=GS.end();gsIter++)
+		{
+                        int DL=gsIter->first;
+                        int spc=0;
+                        map<string,string>* SET=gsIter->second;
+                        for(map<string,string>::iterator igsIter=SET->begin();igsIter!=SET->end();igsIter++)
+			{
+                                ofstream* file=filePtr[igsIter->first];
+                                char name[50];
+                                int n = sprintf(name,"OG%i_%i",grp->getID(),DL);
+                                if(geneClusterAssignment.find(name)!=geneClusterAssignment.end())
+				{
+                                        (*file)<< igsIter->second<<"\t" << geneClusterAssignment.find(name)->second << endl;
+                                }
+                        }
+                }
+        }
+}
+
+int
 Framework::setPreClustering(bool in)
 {
 	preClustering=in;
@@ -1918,6 +2179,18 @@ main(int argc, char *argv[])
 	//SK: variable for the option to run the second optimization stage in SpeciesClusterManager::dumpAllInferredClusterAssignments(const char* outputDir) or not
 	bool secondStage=true;
 	bool preClusteringStage=false;
+	//SK: variable;
+	bool sDefault=false;
+	bool eDefault=false;
+	bool kDefault=false;
+        bool tDefault=false;
+	bool cDefault=false;
+        bool oDefault=false;
+        bool mDefault=false;
+        bool iDefault=false;
+	bool pDefault=false;
+	bool rDefault=false;
+        bool bDefault=false;
 	//SK: define argument option
 	static struct option long_options[] = {
 		{"species-order", 	required_argument, 0,  's' },
@@ -1925,10 +2198,10 @@ main(int argc, char *argv[])
 		{"k-clusters",    	required_argument, 0,  'k' },
 		{"species-tree",   	required_argument, 0,  't' },
 		{"clustering-input",	required_argument, 0,  'c' },
-		{"randomization",       required_argument, 0,  'r' },
+		{"randomization",       required_argument, NULL,  'r' },
 		{"output",       	required_argument, 0,  'o' },
 		{"mode",          	required_argument, 0,  'm' },
-		{"base-species",        required_argument, 0,  'b' },
+		{"base-species",        required_argument, NULL,  'b' },
 		{"init",                required_argument, 0,  'i' },
 		{"prob",        	required_argument, 0,  'p' },
 		{"gene-trees",       	optional_argument, 0,  'g' },
@@ -1948,6 +2221,8 @@ main(int argc, char *argv[])
 	int long_index=0;
 	while ((opt=getopt_long(argc,argv,"s:e:k:t:c:r:o:m:b:i:p:g:d:n:v:w:1:2:h:",long_options,&long_index)) != -1) 
 	{
+		//cout << long_index << endl;
+		//cout << opt << optret << endl;
 		 if(optret=='?'){
                         cout <<"Option error " << optopt << endl;
                         return -1;
@@ -1955,7 +2230,7 @@ main(int argc, char *argv[])
                 char c;
                 char* my_optarg=NULL;
                 c=*(argv[oldoptind]+1);
-                if(optind-oldoptind ==2){
+                if(optind-oldoptind==2){
                         my_optarg=argv[oldoptind+1];
                 }
                 else{
@@ -1966,6 +2241,7 @@ main(int argc, char *argv[])
 		{
 			case 's':
 			{
+				sDefault=true;
 				//SK: if it is, then look at the next string in the argument and copy that string to the SpeciesOrderFName variable.
 				strcpy(speciesOrderFName,my_optarg);
 				//SK: print out the name of the species order list file name. This is to document in the input argument that has been read
@@ -1974,6 +2250,7 @@ main(int argc, char *argv[])
 			}
 			case 'e':
 			{
+				eDefault=true;
 				//SK: take the next string in the command arguments and set the OGIDS file name variable
 				strcpy(OGIDSFName,my_optarg);
 				//SK: print out the variable for the orthomapping file name
@@ -1982,6 +2259,7 @@ main(int argc, char *argv[])
 			}
 			case 'k':
 			{
+				kDefault=true;
 				//SK: print out the number of clusters for the output
 				cout << "Number of clusters: " << my_optarg << endl;
 				//SK: set the kClusters variable
@@ -1990,6 +2268,7 @@ main(int argc, char *argv[])
 			}
 			case 't':
 			{
+				tDefault=true;
 				//SK: copy the tree file name to the treeFName variable
 				strcpy(treeFName,my_optarg);
 				//SK: printout the species tree file name
@@ -1998,6 +2277,7 @@ main(int argc, char *argv[])
 			}
 			case 'c':
 			{
+				cDefault=true;
 				//SK: take the next string in the argument set and copy it to the confFName variable
 				strcpy(confFName,my_optarg);
 				//SK: print out the configuration file name, used for calling the input CA and data files
@@ -2006,6 +2286,7 @@ main(int argc, char *argv[])
 			}
 			case 'r':
 			{ 
+				rDefault=true;
 				//SK: take the next string in the arguments from the command and set the randOpt variable
 				strcpy(randOpt,my_optarg);
 				//SK: print out the randomization option that has been set
@@ -2014,6 +2295,7 @@ main(int argc, char *argv[])
 			}
 			case 'o':
 			{
+				oDefault=true;
 				//SK: copy next string in the arguments from the command and set the outputDir directory.
 				strcpy(outputDir,my_optarg);
 				//SK: print out the name of the output directory that has been given in the command
@@ -2022,6 +2304,7 @@ main(int argc, char *argv[])
 			}
 			case 'm':
 			{
+				mDefault=true;
 				//SK: copy the next string to the mode variable
 				strcpy(mode,my_optarg);
 				//SK: print out the mode option that has been set.
@@ -2030,6 +2313,7 @@ main(int argc, char *argv[])
 			}
 			case 'b':
 			{
+				bDefault=true;
 				//SK: take the next string in the arguments from the command and set the sourceSpecies argument
 				strcpy(sourceSpecies,my_optarg);
 				//SK: print out the source species variable
@@ -2038,6 +2322,7 @@ main(int argc, char *argv[])
 			}
 			case 'i':
 			{
+				iDefault=true;
 				//SK: take the next string in the argument and set the initType variable
 				strcpy(initType,my_optarg);
 				//SK: print out the setting of the initialization type variable                            
@@ -2046,6 +2331,7 @@ main(int argc, char *argv[])
 			}
 			case 'p':
 			{
+				pDefault=true;
 				//take the next string from the arguments from the command and set it to the temp_o_diagonal variable
 				strcpy(temp_p_diagonal,my_optarg);
 				//SK: print out this variable. Depending on the init-type variable, this will be a number or a file name
@@ -2103,7 +2389,7 @@ main(int argc, char *argv[])
                                 if(strcmp(my_optarg,"true")==0)preClusteringStage=true;
                                 if(strcmp(my_optarg,"false")==0)preClusteringStage=false;
                                 //SK: print out the status of this variable, true or false.
-                                cout << "Prep-clustering stage: " << my_optarg << endl;
+                                cout << "Pre-clustering stage: " << my_optarg << endl;
 				break;	
                         }
 			case '2':
@@ -2122,9 +2408,13 @@ main(int argc, char *argv[])
                         }
 			case '?':
 			{
-        			printf("unknown arg: %c\n",my_optarg);
-				exit(EXIT_FAILURE);
-				break;
+        			printf("missing opt: %c\n",opt);
+				return 0;
+			}
+			case ':':
+			{
+				printf("missing arg: %c\n",my_optarg);
+				return 0;
 			}
 			default: 
 			{
@@ -2134,6 +2424,57 @@ main(int argc, char *argv[])
 		}//SK: exit switch loop
 		 oldoptind=optind;
 	}//SK: exit while
+	if(sDefault==false)
+	{
+		cout << "-s species order list file was not defined" << endl;
+		exit(EXIT_FAILURE);
+	}
+	if(eDefault==false)
+        {
+                cout << "-e gene orthology file was not defined" << endl;
+		exit(EXIT_FAILURE);
+        }
+	if(tDefault==false)
+        {
+                cout << "-t species tree file was not defined" << endl;
+		exit(EXIT_FAILURE);
+        }
+	if(sDefault==false)
+        {
+                cout << "-k number of clusters was not defined" << endl;
+		exit(EXIT_FAILURE);
+        }
+	if(cDefault==false)
+        {
+                cout << "-c configuration file was not defined" << endl;
+		exit(EXIT_FAILURE);
+        }
+	if(rDefault==false)
+        {
+                cout << "-r randomization option was not defined" << endl;
+		exit(EXIT_FAILURE);
+        }
+	if(oDefault==false)
+        {
+                cout << "-o output directory path was not defined" << endl;
+		exit(EXIT_FAILURE);
+        }
+	if(mDefault==false)
+        {
+                cout << "-m program run mode was not defined" << endl;
+		exit(EXIT_FAILURE);
+        }
+	if(iDefault==false)
+        {
+                cout << "-i initialization method  option was not defined" << endl;
+		exit(EXIT_FAILURE);
+        }
+        if(pDefault==false)
+        {
+                cout << "-p initial transition probability (p_diagonal) not defined" << endl;
+		exit(EXIT_FAILURE);
+        }
+	//SK: check if required paramters were set.
 	//SK: verify the number of clusters is valid, greater than 1
 	if(kClusters<=1)
 	{

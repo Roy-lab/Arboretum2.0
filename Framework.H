@@ -58,6 +58,7 @@ class Framework
 		int fgconverter(const char*,const char*,int,int);
 		int learnMoE(const char*,const char*,int);
 		int genSpeciesClusters(const char*,const char*);
+		int genSpeciesClustersNonSrc(const char*,const char*);
 		int redisplay(const char*);
 		int setPdiagonalLeaf(double);
 		int setPdiagonalNonLeaf(double);
@@ -69,6 +70,7 @@ class Framework
 		int setSecondStageOption(bool);
 		int mergeData();
 		int readExpressionData(const char* aFName,const char* bFName);
+		int readExpressionDataNonSrc(const char* aFName,const char* bFName);
 		int setPreClustering(bool);
 	private:
 		int learnAncestralClusters();

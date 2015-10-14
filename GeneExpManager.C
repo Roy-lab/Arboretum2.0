@@ -74,11 +74,11 @@ GeneExpManager::readExpression(const char* aFName)
 				expr=new vector<double>;
 				exprSet[geneName]=expr;
 			}
-			//else
-			//{
-			//	expr->push_back(atof(tok));
-			//}
 			else
+			{
+				expr->push_back(atof(tok));
+			}
+			/*else
                         {
                                 if(linecnt>0)
                                 {
@@ -90,9 +90,15 @@ GeneExpManager::readExpression(const char* aFName)
                                         exprHeaders.push_back(tok);
                                 }
 
-                        }
+                        }*/
 			tokCnt++;
 			tok=strtok(NULL,"\t");
+		}
+		string comp;
+		comp.append("FBgn0000018");
+		if(geneName==comp)
+		{
+			cout << comp.c_str() << "\t" << expr->size() << endl;
 		}
 		linecnt++;
 	}	
