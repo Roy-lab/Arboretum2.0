@@ -357,7 +357,7 @@ GammaManager::estimateNonLeafPosteriorAlpha(Gamma::Node* node)
                         {
                                 cout << "left child name " << node->rightchild->name << endl;
                         }
-			//exit(0);
+			exit(0);
 		}
 		if(parent->leftchild==node)
 		{
