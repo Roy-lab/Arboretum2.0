@@ -1,0 +1,10 @@
+prefix=/ahg/regev/users/sroy/thirdparty/gsl-1.13/gsl_install
+exec_prefix=/ahg/regev/users/sroy/thirdparty/gsl-1.13/gsl_install
+libdir=/ahg/regev/users/sroy/thirdparty/gsl-1.13/gsl_install/lib
+includedir=/ahg/regev/users/sroy/thirdparty/gsl-1.13/gsl_install/include
+
+Name: GSL
+Description: GNU Scientific Library
+Version: 1.13
+Libs: -L/ahg/regev/users/sroy/thirdparty/gsl-1.13/gsl_install/lib -lgsl -lgslcblas -lm 
+Cflags: -I/ahg/regev/users/sroy/thirdparty/gsl-1.13/gsl_install/include
