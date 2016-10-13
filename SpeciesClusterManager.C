@@ -216,15 +216,15 @@ SpeciesClusterManager::initExperts()
                 for(CLUSTERSET_ITER cIter=speciesExpert->begin();cIter!=speciesExpert->end();cIter++)
                 {
                         Expert* e=cIter->second;
-			int sample=estimateMeanCov(e,(string&)aIter->first,cIter->first);
-                        if(sample<10)
+                        int sample=estimateMeanCov(e,(string&)aIter->first,cIter->first);
+                        if(strcmp(aIter->first.c_str(),srcSpecies)!=0)
                         {
-				if(strcmp(aIter->first.c_str(),srcSpecies)==0)
-                		{
-					cout << srcSpecies << " cluster " << cIter->first << " has " << sample << " genes." << endl;
-					cout << "Exiting program in SpeciesClusterManager::initExperts()" << endl;
-                			exit(EXIT_FAILURE);
-				}
+                                /*if(strcmp(aIter->first.c_str(),srcSpecies)==0)
+                                {
+                                        cout << srcSpecies << " cluster " << cIter->first << " has " << sample << " genes." << endl;
+                                        cout << "Exiting program in SpeciesClusterManager::initExperts()" << endl;
+                                        exit(EXIT_FAILURE);
+                                }*/
                                 deleteme[cIter->first]=0;
                         }
                 }
