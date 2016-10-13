@@ -56,4 +56,4 @@ To use the example files from the Arboretum Website at http://pages.discovery.wi
 
 ./arboretum -s specorder_allclade.txt -e OGid_members.txt -k 5 -t species_prob_heat8spec.txt -c cluster_conf.txt - r none -o result_dir -m learn -b Scer -i uniform -p 0.8 -g data/TREES -n 100 -1 false -2 true -w true
 
-This will create the output directory result_dir is it already exists, or otherwise write over it with the -w true option. Details of the file formats can also be studied from these examples. 
+This will create the output directory result_dir is it already exists, or otherwise write over it with the -w true option. Details of the file formats can also be studied from these examples.
