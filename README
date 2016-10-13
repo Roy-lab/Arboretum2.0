@@ -12,7 +12,7 @@ Required options:
 -k              Number of clusters in each species.
 -t              Species tree file of species which are represented by the input data in the analysis
 -c              The input cluster assgnment and expression data for each species in the analysis.
-This file of the form: species <tab> cluster_assign_file <tab> expression_data_file
+This file should be of the form: species <tab> cluster_assign_file <tab> expression_data_file
 -r              Option to randomize input cluster assignments rseed|none|yes.
 -o              Output directory.
 -m              Defines the mode in which the algorithm is to be used; learn|generate|visualize|crossvalidate are the options.
