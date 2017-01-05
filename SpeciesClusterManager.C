@@ -217,14 +217,14 @@ SpeciesClusterManager::initExperts()
                 {
                         Expert* e=cIter->second;
 			int sample=estimateMeanCov(e,(string&)aIter->first,cIter->first);
-                        if(sample<10)
+                        if(strcmp(aIter->first.c_str(),srcSpecies)!=0)
                         {
-				if(strcmp(aIter->first.c_str(),srcSpecies)==0)
+				/*if(strcmp(aIter->first.c_str(),srcSpecies)==0)
                 		{
 					cout << srcSpecies << " cluster " << cIter->first << " has " << sample << " genes." << endl;
 					cout << "Exiting program in SpeciesClusterManager::initExperts()" << endl;
                 			exit(EXIT_FAILURE);
-				}
+				}*/
                                 deleteme[cIter->first]=0;
                         }
                 }
@@ -323,6 +323,21 @@ SpeciesClusterManager::estimateExpertParameters(const char* outputDir)
 	double currScore=0;
 	bool convergence=false;
 	int iter=0;
+	/*  char testDir[300];
+        sprintf(testDir,"%s/iteration0",outputDir);
+        char outputDirCmd[1024];
+        //SK: write command to second variable.
+        sprintf(outputDirCmd,"mkdir -p %s",testDir);
+        //SK: run the system command to create a new, empty version of the directory.
+        system(outputDirCmd);
+        gammaMgr->estimateNonLeafPosterior();
+        gammaMgr->estimateTransitionProbability();
+        gammaMgr->getAllClusterAssignments_Grouped(allClusterAssignmentsGrouped);
+        dumpAllInferredClusterAssignments(testDir,iter);
+        showClusters_Extant(testDir);
+        showClusters_Ancestral(testDir);
+        cout << "Now exiting" << endl;
+        exit;*/
 	//SK: use nMaxIterations to control this while loop
 	//SK: this is the maximum number of iterations to run without convergence
 	while((!convergence)&&(iter<nMaxIterations))
@@ -2144,7 +2159,7 @@ SpeciesClusterManager::dumpAllInferredClusters_ScerwiseGrouped(const char* outpu
 
 int
 SpeciesClusterManager::dumpAllInferredClusters_LCA(const char* outputDir,vector<string>& speciesList, string& lcaName)
-{	
+{
 	char outputFName[1024];
 	sprintf(outputFName,"%s/allspecies_clusterassign_lca_brk.txt",outputDir);
 	ofstream oFile(outputFName);

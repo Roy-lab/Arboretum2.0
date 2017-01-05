@@ -2427,61 +2427,51 @@ main(int argc, char *argv[])
 	if(sDefault==false)
 	{
 		cout << "-s species order list file was not defined" << endl;
-		print_usage();
 		exit(EXIT_FAILURE);
 	}
 	if(eDefault==false)
         {
                 cout << "-e gene orthology file was not defined" << endl;
-		print_usage();
 		exit(EXIT_FAILURE);
         }
 	if(tDefault==false)
         {
                 cout << "-t species tree file was not defined" << endl;
-		print_usage();
 		exit(EXIT_FAILURE);
         }
 	if(sDefault==false)
         {
                 cout << "-k number of clusters was not defined" << endl;
-		print_usage();
 		exit(EXIT_FAILURE);
         }
 	if(cDefault==false)
         {
                 cout << "-c configuration file was not defined" << endl;
-		print_usage();
 		exit(EXIT_FAILURE);
         }
 	if(rDefault==false)
         {
                 cout << "-r randomization option was not defined" << endl;
-		print_usage();
 		exit(EXIT_FAILURE);
         }
 	if(oDefault==false)
         {
                 cout << "-o output directory path was not defined" << endl;
-		print_usage();
 		exit(EXIT_FAILURE);
         }
 	if(mDefault==false)
         {
                 cout << "-m program run mode was not defined" << endl;
-		print_usage();
 		exit(EXIT_FAILURE);
         }
 	if(iDefault==false)
         {
                 cout << "-i initialization method  option was not defined" << endl;
-		print_usage();
 		exit(EXIT_FAILURE);
         }
         if(pDefault==false)
         {
                 cout << "-p initial transition probability (p_diagonal) not defined" << endl;
-		print_usage();
 		exit(EXIT_FAILURE);
         }
 	//SK: check if required paramters were set.
@@ -2490,7 +2480,6 @@ main(int argc, char *argv[])
 	{
 		//SK: print warning and exit program if it is not
 		cout << "Error: invalid number of clusters; exiting program." << endl;
-		print_usage();
 		return 0;
 	}
 	//SK: check output directory status
