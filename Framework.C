@@ -1453,19 +1453,28 @@ int
 Framework::readExpressionDataNonSrc(const char* aFName,const char* bFName)
 {
         ofstream oFile(bFName);
-        map < string , map <string , vector <string> > > MAPS;
+        map < string , map <string , vector <string> > > MAPS; //object containing species and gene names and data in string format
+	//SK: order of species
         vector <string> specOrder;
+	//SK: set of OGIDS relevant to analysis
         map <int,int> ogidSet;
+	//SK: set of numbers of genes relevant to the analysis for orthogroups
         map <string,int> geneCnts;
+	//SK: set of numbers of measurements per gene for each species expression data set 
         map <string,int> dataCnts;
+	//SK: interger to count if a given gene/orthogroup is uniform
         int uniformGenes;
-        int uniformGenesWithExpr;
+        //SK interger to count the number of genes 
+	int uniformGenesWithExpr; //integer to count if that orthogorups also has data for sufficient number of genes
+	//SK: integer to count the number of genes with expression
         int genesWithExpr=0;
-        ifstream inFile(aFName);
+	//SK: input expression data configuration file name 
+        ifstream inFile(aFName); 
         int maxGeneCnt=2;
         char buffer[1024];
         speciesList.clear();
         cout << "Reading " << aFName << endl;
+	//SK: read in configuration file name 
         while(inFile.good())
         {
                 inFile.getline(buffer,1023);
@@ -1477,6 +1486,7 @@ Framework::readExpressionDataNonSrc(const char* aFName,const char* bFName)
                 int tokCnt=0;
                 string specName;
                 string fileName;
+		//SK: for each line of the configuration file read in the species name and the data file name.
                 while(tok!=NULL)
                 {
                         if(tokCnt==0)
@@ -1490,13 +1500,17 @@ Framework::readExpressionDataNonSrc(const char* aFName,const char* bFName)
                         tok=strtok(NULL,"\t");
                         tokCnt++;
                 }
+		//print out that species name and data file name, and read in that data file to teh MAPS object.
                 cout << specName << endl;
                 cout << fileName << endl;
+		//SK: add species name to list of species of interest
                 speciesList[specName]=0;
                 specOrder.push_back(specName);
+		//SK : define map object for reading in the expression data information 
                 map <string , vector <string> > gexp;
                 ifstream inFileS(fileName.c_str());
                 char bufferS[1024];
+		//SK: read in expression data file for this species and save the expression data in string format for each gene in this species data sets
                 while(inFileS.good())
                 {
                         inFileS.getline(bufferS,1023);
@@ -1506,102 +1520,152 @@ Framework::readExpressionDataNonSrc(const char* aFName,const char* bFName)
                         }
                         char* tokS=strtok(bufferS,"\t");
                         int tokCntS=0;
+			//SK: define variables for gene name and expression data for this entry in the species data matrix
 			string geneName;
                         vector <string> data;
                         while(tokS!=NULL)
                         {
                                 if(tokCntS==0)
                                 {
-                                        geneName.append(tokS);
+					//SK: set gene name 
+                                        geneName.append(tokS); //read in gene name 
                                 }
                                 else if(tokCntS>0)
                                 {
+					//SK: fill vector object for data
                                         string tmp;
                                         tmp.append(tokS);
-                                        data.push_back(tmp);
+                                        data.push_back(tmp); //read in data as string.
                                 }
                                 tokS=strtok(NULL,"\t");
                                 tokCntS++;
                         }
-                        gexp[geneName]=data;
+			//SK: fill the data map object for this species
+                        gexp[geneName]=data; 
+			//SK: fill the dataCnts object with the numbre of measurements for each gene in thsi species.
                         dataCnts[specName]=data.size();
                 }
-                MAPS[specName]=gexp;
-                cout << specName << "\t" << gexp.size() << endl;
-                cout << gexp.begin()->second.size() << endl;
+		//SK: ender the data object for this species in the MAPS map object for the data for all  species
+                MAPS[specName]=gexp; 
+                //cout << specName << "\t" << gexp.size() << endl; 
+                //cout << gexp.begin()->second.size() << endl;
                 inFileS.close();
         }
-        inFile.close();
-        int NSpc=specOrder.size();
-        vector <int> NC(NSpc,0);
-        int minSpcCnt=0;
-	map<int,MappedOrthogroup*>& ogSet=mor.getMappedOrthogroups();
-	for(map<int,MappedOrthogroup*>::iterator oIter=ogSet.begin();oIter!=ogSet.end();oIter++)
+        inFile.close(); 
+	//SK: at this point the data matrices are read in as string objects, organized by species name and gene name in the MAPS object. 
+	//SK: now write header line of the output file 
+	oFile << "Name";//write header line of the likes. 
+        for(int s=0;s<specOrder.size();s++)
+        {
+                int exp=dataCnts.find(specOrder[s])->second;
+                for(int i=0;i<exp;i++)
+                {
+                        oFile << "\t" << specOrder[s] << "_Exp" << i;
+                }
+        }
+	oFile << endl; 
+	//SK: now being to write out the merged data by orthogroup and duplication level 
+	//SK: define the number of species of interest
+       	int NSpc=specOrder.size();
+        int minSpcCnt=2;
+	//SK: obatin orthogroup set
+	map<int,MappedOrthogroup*>& ogSet=mor.getMappedOrthogroups(); //obtain orthogroup informatio
+	//SK: get set of species names and ids for the orthogy information in the mor object
+	map<int,string> allSpeciesIDs = mor.getSpeciesIDNameMap();
+	//SK: define a map object that contains the same information as allSpeciesIDs from mor, but with reversed mappings, i.e., species name to orthology id, and not the reverse
+	map<string,int> allSpeciesIDs_r;
+	for(map<int,string>::iterator mIter=allSpeciesIDs.begin();mIter!=allSpeciesIDs.end();mIter++)
 	{
+		allSpeciesIDs_r[mIter->second]=mIter->first;
+	}
+	//SK: define mapping of ids in the orthology for ourr subset of species of interest for the analysis
+	vector <int> MapS(NSpc,-1); //define bector to map the species of interest in this orthogroup 
+	for(int i=0;i<NSpc;i++)
+	{
+		int m=allSpeciesIDs_r.find(specOrder[i])->second;
+		MapS[i]=m;
+	}
+	//SK: set number of species represetned in the orthology
+	int NAllSpecies=0; //set number of annotated species in orthology
+	NAllSpecies=mor.getNAllSpecies();
+	//SK: loop over all orthogroups 
+	for(map<int,MappedOrthogroup*>::iterator oIter=ogSet.begin();oIter!=ogSet.end();oIter++) //loop over the orthogroups in the input orthology information
+	{
+		//SK: get orthogroup information
                 MappedOrthogroup* grp = oIter->second;
+		//leave orthogroup if there are fewer than two members
                 if(grp->getOrthoMembers().size()<minSpcCnt)
 		{
-                        cout << "To few members: Leaving ortho group" << grp->getID() << endl;
+                        cout << "To few members: Leaving ortho group " << grp->getID() << endl; //check if there are at lest minSpcCnt genes in the orthogroup, if not skip and this orthogroup won't be represented in the output. 
                         continue;
                 }
-                else cout << grp->getOrthoMembers().size() << endl;
+                //else cout << grp->getOrthoMembers().size() << endl;
+		//SK: get gene set information if we are proceeding with this orthogroup
                 map<int,map<string,string>*>& GS=grp->getGeneSets();
+		//SK: get number of duplication levels in this orthogroup
                 int DL=GS.size();
-                vector <string> SpcList;
-                vector < vector <string> > GenesInOGID(DL,vector <string>(NSpc));
-                for(map<int,map<string,string>*>::iterator gsIter=GS.begin();gsIter!=GS.end();gsIter++)
+                vector <string> SpcList; 
+                //SK: define array object to list the gene names associated  with each duplication level of the orthology. This includes the gene names for all species in the orthology not only the species of interest
+		vector < vector <string> > GenesInOGID(DL,vector <string>(NAllSpecies));
+		//SK: loop over gene set information to fill GenesInOGID
+                for(map<int,map<string,string>*>::iterator gsIter=GS.begin();gsIter!=GS.end();gsIter++) //loop over orthogroup information to expreat the list of species and genes that are in the OG
 		{
-                        int DL=gsIter->first;
-                        int spc=0;
+			//SK: define current interer that represetnts teh curent duplication level we're working on 
+                        int DLv=gsIter->first;
                         map<string,string>* SET=gsIter->second;
                         for(map<string,string>::iterator igsIter=SET->begin();igsIter!=SET->end();igsIter++)
 			{
-                                SpcList.push_back(igsIter->first);
-                                GenesInOGID[DL][spc]=igsIter->second;
-                                spc++;
+                                //SpcList.push_back(igsIter->first);
+				//SK: get the species id for the species assiciated with the current member gene on this duplication level
+				int spc=allSpeciesIDs_r.find(igsIter->first)->second;
+				//SK: fill gene name array 
+                                GenesInOGID[DLv][spc]=igsIter->second;
+				//cout << igsIter->first << "\t" << igsIter->second << endl;
                         }
-                }
-                vector <int> MapS(NSpc,-1);
-                for(int i=0;i<NSpc;i++)
+                }//end of loops
+		//SK: have now gotten gene names for the duplication levels of this current orthogroup for all species in this orthology. 
+		//SK: now check how mny of out species of interest have data on each orthogroup duplication level and write out information if there are at least 2. 
+		//SK: now loop over the duplication levels of this orthogroup
+		for(int d=0;d<DL;d++) 
 		{
-                        for(int j=0;j<NSpc;j++)
-			{
-                                if(specOrder[i]==SpcList[j])
-				{
-                                        MapS[i]=j;
-                                }
-                        }
-                }
-		for(int d=0;d<DL;d++)
-		{
-                        int cov=0;
+			//SK: variable to define the number of genes in species of interest with data. 	
+                        int cov=0; 
+			//SK: loop over all species 
                         for(int s=0;s<NSpc;s++)
 			{
-                                if(MAPS.find(specOrder[s])==MAPS.end())
+				//SK: proceed only if there is a non null genename for this species 
+				if(!GenesInOGID[d][MapS[s]].empty())
 				{
-                                        continue;
-                                }
-				string genename = GenesInOGID[d][MapS[s]]; 
-				if(MAPS.find(specOrder[s])!=MAPS.end() && MAPS.find(specOrder[s])->second.find(genename)!=MAPS.find(specOrder[s])->second.end());
-				{
-                                        cov++;
-                                }
+					//SK: get the species gene name for those duplication level (d) of this orthogroup (oIter->first)
+					string genename = GenesInOGID[d][MapS[s]];	
+					//SK:check if that gene has data for this species data set, and count it if it does.	
+					if(MAPS.find(specOrder[s])!=MAPS.end() && MAPS.find(specOrder[s])->second.find(genename)!=MAPS.find(specOrder[s])->second.end()); 
+					//check if that gene has data assocaited with it
+					{
+						cov++;
+						//cout << "Found " << genename << " in " << specOrder[s] << endl;
+					}
+				}
                         }
-                        if(cov<minSpcCnt)
+			//SK: break the loop if this duplication level as fewer than the required minimum number of genes. This means that an orthogroup with multiple duplication levels will have as many entries in the output merged data file as there are duplication levels, starting from no duplication, that have at least the minimum number of genes with data.
+			//SK: as genes tend to become sparser with increasing duplication level, the lower duplication levels with a sufficient number of genes are defined in the output and potentially have their own cluster assignment.	
+                       if(cov<minSpcCnt)
 			{
 				break;
 			}
+			//SK: vector object to hold the merged data information
 			vector <string> entries;
+			//SK: define default entry for missing data values, for genes that are not in the orthology or that have no data in a given species.
 			string in;
 			in.append("<nodata>");
-                        for(int s=0;s<NSpc;s++)
+			//SK: keeping it in this format in case there comes a time we want to write the merged data file with <nodata> for missing entries, instead of the 
+			//SK: loop over our species of interest again.
+                        for(int s=0;s<NSpc;s++) //loop over all species
 			{
+				//SK: get gene name for this species on this duplication level 
 				string genename = GenesInOGID[d][MapS[s]];
-                                if(MAPS.find(specOrder[s])==MAPS.end())
-				{
-					continue;
-				}				
-                                if(MAPS.find(specOrder[s])->second.find(genename)!=MAPS.find(specOrder[s])->second.end())
+				//SK: check if this gene has data and if so add that data to the entries vector for this duplication level .
+                                if(MAPS.find(specOrder[s])->second.find(genename)!=MAPS.find(specOrder[s])->second.end()) //if it is a species we are looking at and it is a gene with data do the following
 				{
 					vector <string> data=MAPS.find(specOrder[s])->second.find(genename)->second;
 					for(int i=0;i<data.size();i++)
@@ -1609,52 +1673,60 @@ Framework::readExpressionDataNonSrc(const char* aFName,const char* bFName)
 						entries.push_back(data[i]);
 					}
 				}
-				else
+				else //otherwise if it is a species of interest but there is no data for this gene, use the default entry for the mitting gene/data for this species in this like of the meregd data file.
 				{
-                                        for(int c=0;c<dataCnts.find(specOrder[s])->second;c++)
+                                        for(int c=0;c<dataCnts.find(specOrder[s])->second;c++)//add as many entries at there are data measuresments
 					{
 						entries.push_back(in);
                                         }
                                 }
                         }
+			//SK: a variable to hold the sum of the availalbe data entries for the genes with data on this duplication level 
 			double total=0;
+			//SK: a variable to hold the value for the number of missing data entries 
 			int numEmpty=0;
+			//SK: loop over the entries vector and count the number of missing and non-missing entries 
 			for(int i=0;i<entries.size();i++)
 			{
 				if(entries[i]!=in)
 				{
-					total += atof(entries[i].c_str());
+					total += atof(entries[i].c_str()); //sum up the total of the non-missing data entries
 				}
 				else
 				{
-					numEmpty++;
+					numEmpty++; //sum the number of missing data entries. 
 				}
 			}
+			//SK: define the number data entries 
 			int dat=entries.size()-numEmpty;
-			double ave=(double)total/(double)dat;
-			//SK: now fill a double vector object with the average of present values for missing values, selecting  
+			//SK: dfine the average value of the data entries
+			double ave=(double)total/(double)dat; //calculate the average of the data entries.
+			//SK: define a double vector object
 			vector <double> values;
-			for(int i=0;i<entries.size();i++)
+			//SK: loop over all of the entries and fill the values vector, using the average for the mising values 
+			for(int i=0;i<entries.size();i++) //write out the data for this orthogroup duplication level as numbers 
 			{
-				if(entries[i]!="<nodata>")
+				if(entries[i]!="<nodata>")//if it is not a missing value, than use the data value
 				{
 					values.push_back(atof(entries[i].c_str()));
 				}
-				else
+				else //if it is a missing value then insert the average value for this orthogroup-duplication level
 				{
 					values.push_back(ave);
 				}
 			}
-			//SK: write out first line of the matrix file.
-			oFile << "OG" << grp->getID();
+			//SK: Now write out the data for this duplication level using the values learned.  Here the OG id and duplication level define the "name" of this entry in the merged data file
+			oFile << "OG" << grp->getID() << "_" << d;
+			//SK: set variable for the number of measurements per gene.
+			expCntPerGene=values.size();
 			for(int i=0;i<values.size();i++)
 			{
 				oFile << "\t" << values[i];
 			}
 			oFile << endl;
-		}
-	}
-}
+		}//SK: endloop for this duplication level 
+	}//SK: end loop for this orthogroup
+}//SK: finished with function
 
 int
 Framework::fgconverter(const char* geneexpFName,const char* outsuffix,int logTrans,int dataStart)
@@ -2054,6 +2126,7 @@ Framework::genSpeciesClusters(const char* aFName,const char* outDir)
 int
 Framework::genSpeciesClustersNonSrc(const char* aFName,const char* outDir)
 {
+	//SK: start by reading in the cluster assignment information for the merged data
 	map<string,int> geneClusterAssignment;
 	ifstream inFile(aFName);
         char buffer[1024];
@@ -2084,52 +2157,94 @@ Framework::genSpeciesClustersNonSrc(const char* aFName,const char* outDir)
                 geneClusterAssignment[geneName]=clusterid;
         }
         inFile.close();
+	//SK: define map of out file ofstream objects, with one for each species
         map<string,ofstream*> filePtr;
         int excludeID=0;
-	
+	//SK: loop over the set of species in the analysis and initialize and initialize the ofstream object for the input cluster assignment file for each species. 
 	for(map<string,int>::iterator sIter=speciesList.begin();sIter!=speciesList.end();sIter++)
 	{
-		char bFName[1024];
-		string specName=sIter->first;
-		sprintf(bFName,"%s/%s_initial_clusterassign.txt",outDir,specName.c_str());
-		ofstream* oFile=new ofstream(aFName);
-		filePtr[specName]=oFile;
+		 string specName=sIter->first;
+                if(specName.length()>0)
+                {
+                        char bFName[1024];
+                        sprintf(bFName,"%s/%s_initial_clusterassign.txt",(char*)outDir,specName.c_str());
+                        ofstream* oFile=new ofstream(bFName);
+                        filePtr[specName]=oFile;
+                }
         }
-        inFile.close();
+	//SK: get set of orthogroups 
         map<int,MappedOrthogroup*>& ogSet=mor.getMappedOrthogroups();
+	//SK: set minimum number of species to be represented at a given duplicatoin level for a given orthogroup
         int minSpcCnt=2;
+	//SK:loop over all orthogroups 
         for(map<int,MappedOrthogroup*>::iterator oIter=ogSet.begin();oIter!=ogSet.end();oIter++)
 	{
+		//SK: get the orthogroup infofrmation
                 MappedOrthogroup* grp = oIter->second;
-                if(grp->getOrthoMembers().size()<2)
+		//SK: check if there are less than the minimum number of species in this orthogroup
+                if(grp->getOrthoMembers().size()<minSpcCnt)
 		{
-                        cout << "To few members: Leaving ortho group" << grp->getID() << endl;
+                        //cout << "To few members: Leaving ortho group" << grp->getID() << endl;
                         continue;
                 }
-                if((excludedOGList.size()>0) && (excludedOGList.find(grp->getID())!=excludedOGList.end()))
+		//SK: define the test id for teh first duplication level 
+		char testid[50];
+                int n = sprintf(testid,"OG%i_0",grp->getID());
+		//SK: check if that first duplication level is represented in the cluster assignments from the merged data. 
+		//SK: saves time searching information on an orthogroup that may not have any relevant entries in the merged data. 
+		if(geneClusterAssignment.find(testid)==geneClusterAssignment.end())
+		{
+			continue;
+		}
+		//SK: for future functionality, check if this orthogroup in in a set of orthogroups to be excluded from the analysis
+		//SK: subject to a seaparate function for reading in a list of excluded orthogroups
+		//SK: curently excludedOGList is a map that is not filled and hence thus continue is never called here at this time. 
+               if((excludedOGList.size()>0) && (excludedOGList.find(grp->getID())!=excludedOGList.end()))
 		{
                         excludeID++;
                         continue;
                 }
                 map<string,GeneMap*>& Members=grp->getOrthoMembers();
+		//SK: get gene set information 
                 map<int,map<string,string>*>& GS=grp->getGeneSets();
+		//SK:Set variable to hold last used cluster assignment for this orthogroup. 
+		//SK: set it to -1 so that I can identify if any cluster assignments have been set for this orthogroup on any duplication level 
+		int lastCA=-1;
+		//SK: loop over gene set information for each duplication level of the orthogroup
                 for(map<int,map<string,string>*>::iterator gsIter=GS.begin();gsIter!=GS.end();gsIter++)
 		{
+			//SK: define orthogroup level  
                         int DL=gsIter->first;
-                        int spc=0;
+			//SK: define the group id name  as it would appear in the merged clustering output, which will be in the form of  OG<ogid>_<duplication level>
+                        char groupid[50];
+                        int n = sprintf(groupid,"OG%i_%i",grp->getID(),DL);
                         map<string,string>* SET=gsIter->second;
-                        for(map<string,string>::iterator igsIter=SET->begin();igsIter!=SET->end();igsIter++)
+                        //SK: loop over the gene memevers of this duplication level of this orthogroup
+			for(map<string,string>::iterator igsIter=SET->begin();igsIter!=SET->end();igsIter++)
 			{
-                                ofstream* file=filePtr[igsIter->first];
-                                char name[50];
-                                int n = sprintf(name,"OG%i_%i",grp->getID(),DL);
-                                if(geneClusterAssignment.find(name)!=geneClusterAssignment.end())
+				//cout << igsIter->first << endl;
+				//SK: check if this gene is from a species of interest in our analysis, continue if it is not
+				if(speciesList.find(igsIter->first)==speciesList.end())
 				{
-                                        (*file)<< igsIter->second<<"\t" << geneClusterAssignment.find(name)->second << endl;
+					continue;
+				}
+				//SK: if this is a gene for a species of interest then prepare to write out this information by calling the pointer for the ofstream for the cluster assignment file for this specoes. 
+                                ofstream* file=filePtr.find(igsIter->first)->second;
+				//SK: check if this group/duplication level appears in the clusterassignment  information for the merged data, and write out the initial cluster assignment for this gene in this species. 
+                                if(geneClusterAssignment.find(groupid)!=geneClusterAssignment.end())
+				{
+                                        (*file) << igsIter->second << "\t" << geneClusterAssignment.find(groupid)->second << endl;
+					lastCA=geneClusterAssignment.find(groupid)->second;
+					//cout << igsIter->second << "\t" << geneClusterAssignment.find(groupid)->second << endl;
                                 }
-                        }
-                }
-        }
+				//SK: otherwise if this duplication level isn't in the merged data output and we have a gene in a species of interest here, then give that gene the last cluster assignment from the highest duplication level in this orthogroup that has at least 2 genes with data. The fact that lastCA must not be -1 means that at least one duplication level must have two or more genes for this orthogroups, such that it's otherwise already a useful orthogroup.
+				else if(lastCA!=-1)
+				{
+					//(*file) << igsIter->second << "\t" << lastCA;
+				}
+                        }//SK: end loop over gene set
+                }//SK: end look over duplication levels
+        }//SK: end loop over duplication levels
 }
 
 int
@@ -2179,7 +2294,7 @@ main(int argc, char *argv[])
 	//SK: variable for the option to run the second optimization stage in SpeciesClusterManager::dumpAllInferredClusterAssignments(const char* outputDir) or not
 	bool secondStage=true;
 	bool preClusteringStage=false;
-	//SK: variable;
+	//SK: boolean variables for identifying if the required arguments have been set;
 	bool sDefault=false;
 	bool eDefault=false;
 	bool kDefault=false;
@@ -2424,29 +2539,35 @@ main(int argc, char *argv[])
 		}//SK: exit switch loop
 		 oldoptind=optind;
 	}//SK: exit while
+	//SK: the following lines check if any of the required input arguments have not been set and prints a statement about what argument is missing and then also the overall usage summary information that is availalbe with the -h or --help information. This is meant to assist the inexperienced user in troublshooting the arguments that may be missing. 
 	if(sDefault==false)
 	{
 		cout << "-s species order list file was not defined" << endl;
+		print_usage();
 		exit(EXIT_FAILURE);
 	}
 	if(eDefault==false)
         {
                 cout << "-e gene orthology file was not defined" << endl;
+		print_usage();
 		exit(EXIT_FAILURE);
         }
 	if(tDefault==false)
         {
                 cout << "-t species tree file was not defined" << endl;
+		print_usage();
 		exit(EXIT_FAILURE);
         }
 	if(sDefault==false)
         {
                 cout << "-k number of clusters was not defined" << endl;
+		print_usage();
 		exit(EXIT_FAILURE);
         }
 	if(cDefault==false)
         {
                 cout << "-c configuration file was not defined" << endl;
+		print_usage();
 		exit(EXIT_FAILURE);
         }
 	if(rDefault==false)
@@ -2457,21 +2578,25 @@ main(int argc, char *argv[])
 	if(oDefault==false)
         {
                 cout << "-o output directory path was not defined" << endl;
+		print_usage();
 		exit(EXIT_FAILURE);
         }
 	if(mDefault==false)
         {
                 cout << "-m program run mode was not defined" << endl;
+		print_usage();
 		exit(EXIT_FAILURE);
         }
 	if(iDefault==false)
         {
                 cout << "-i initialization method  option was not defined" << endl;
+		print_usage();
 		exit(EXIT_FAILURE);
         }
         if(pDefault==false)
         {
                 cout << "-p initial transition probability (p_diagonal) not defined" << endl;
+		print_usage();
 		exit(EXIT_FAILURE);
         }
 	//SK: check if required paramters were set.
@@ -2547,7 +2672,7 @@ main(int argc, char *argv[])
 		fw.setPreClustering(true);
 		char mergedFile[1024];
 		sprintf(mergedFile,"%s/mergedData.txt",outputDir);
-		fw.readExpressionData(confFName,mergedFile);
+		fw.readExpressionDataNonSrc(confFName,mergedFile);
 		char outsuffix[1024];
 		sprintf(outsuffix,"%s/mergedData",outputDir);
 		fw.fgconverter(mergedFile,outsuffix,1,1);
@@ -2555,8 +2680,8 @@ main(int argc, char *argv[])
 		sprintf(clusteringOutputDir,"%s/mergedClustering",outputDir);
 		fw.learnMoE(outsuffix,clusteringOutputDir,kClusters);
 		char clusterFile[1024];
-                sprintf(clusterFile,"%s/mergedClustering/clusterassign.txt",outputDir);
-		fw.genSpeciesClusters(clusterFile,outputDir);
+                sprintf(clusterFile,"%s/mergedClustering/fold0/clusterassign.txt",outputDir);
+		fw.genSpeciesClustersNonSrc(clusterFile,outputDir);
 		//return 0;		
 	}
 	//SK: check that the program is not being run in cross validation mode

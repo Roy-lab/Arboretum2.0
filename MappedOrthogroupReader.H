@@ -15,7 +15,8 @@ class MappedOrthogroupReader
 	MappedOrthogroup* getMappedOrthogroup(const char*, const char*);
 	map<int,MappedOrthogroup*>& getMappedOrthogroups();
 	STRINTMAP* getOrtholog(const char* srcSpecName, const char* geneName, const char* targetSpecName);
-
+	int getNAllSpecies();
+	map<int,string> getSpeciesIDNameMap();
 	private:
 	int addMembers(char*,MappedOrthogroup*);
 	int generateGeneOrthoMap();

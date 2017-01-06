@@ -31,11 +31,11 @@ MappedOrthogroupReader::readFile(const char* aFName)
 	while(inFile.good())
 	{
 		getline(inFile,buffstr);
-		if(lineCnt==0)
+		/*if(lineCnt==0)
 		{
 			lineCnt++;
 			continue;
-		}
+		}*/
 		if(bufflen<=buffstr.length())
 		{
 			if(buffer!=NULL)
@@ -233,3 +233,16 @@ MappedOrthogroupReader::generateGeneOrthoMap()
 	}
 	return 0;
 }
+
+int 
+MappedOrthogroupReader::getNAllSpecies()
+{
+	return speciesIDNameMap.size();
+}
+
+map<int,string> 
+MappedOrthogroupReader::getSpeciesIDNameMap()
+{
+	return speciesIDNameMap;
+}
+
