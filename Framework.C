@@ -2240,7 +2240,7 @@ Framework::genSpeciesClustersNonSrc(const char* aFName,const char* outDir)
 				//SK: otherwise if this duplication level isn't in the merged data output and we have a gene in a species of interest here, then give that gene the last cluster assignment from the highest duplication level in this orthogroup that has at least 2 genes with data. The fact that lastCA must not be -1 means that at least one duplication level must have two or more genes for this orthogroups, such that it's otherwise already a useful orthogroup.
 				else if(lastCA!=-1)
 				{
-					//(*file) << igsIter->second << "\t" << lastCA;
+					(*file) << igsIter->second << "\t" << lastCA;
 				}
                         }//SK: end loop over gene set
                 }//SK: end look over duplication levels
