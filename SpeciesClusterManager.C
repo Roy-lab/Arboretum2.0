@@ -213,30 +213,32 @@ SpeciesClusterManager::initExperts()
                 }
                 CLUSTERSET* speciesExpert=aIter->second;
                 map<int,int> deleteme;
-		for(CLUSTERSET_ITER cIter=speciesExpert->begin();cIter!=speciesExpert->end();cIter++)
-                {
-                        Expert* e=cIter->second;
-                        int sample=estimateMeanCov(e,(string&)aIter->first,cIter->first);
-                        if(sample<10)
-                        {
-                                if(strcmp(aIter->first.c_str(),srcSpecies)==0)
-                                {
-                                        cout << srcSpecies << " cluster " << cIter->first << " has " << sample << " genes." << endl;
-                                        cout << "Exiting program in SpeciesClusterManager::initExperts()" << endl;
-                                        exit(EXIT_FAILURE);
-                                }
-                                deleteme[cIter->first]=0;
-                        }
-                }
-                /*for(CLUSTERSET_ITER cIter=speciesExpert->begin();cIter!=speciesExpert->end();cIter++)
-                {
-                        Expert* e=cIter->second;
-			int sample=estimateMeanCov(e,(string&)aIter->first,cIter->first);
-                        if(strcmp(aIter->first.c_str(),srcSpecies)!=0)
-                        {
-                                deleteme[cIter->first]=0;
-                        }
-                }*/
+		if(!sourceInit)
+		{
+			for(CLUSTERSET_ITER cIter=speciesExpert->begin();cIter!=speciesExpert->end();cIter++)
+			{
+				Expert* e=cIter->second;
+				int sample=estimateMeanCov(e,(string&)aIter->first,cIter->first);
+				if(sample<10)
+				{
+					cout << srcSpecies << " cluster " << cIter->first << " has " << sample << " genes." << endl;
+					cout << "Exiting program in SpeciesClusterManager::initExperts()" << endl;
+					exit(EXIT_FAILURE);
+				}
+			}
+		}
+		else
+		{
+			for(CLUSTERSET_ITER cIter=speciesExpert->begin();cIter!=speciesExpert->end();cIter++)
+			{
+				Expert* e=cIter->second;
+				int sample=estimateMeanCov(e,(string&)aIter->first,cIter->first);
+				if(strcmp(aIter->first.c_str(),srcSpecies)!=0)
+				{
+					deleteme[cIter->first]=0;
+				}
+			}
+		}
                 for(map<int,int>::iterator cIter=deleteme.begin();cIter!=deleteme.end();cIter++)
                 {
                         cout << "Deleting " << cIter->first << endl;
@@ -258,7 +260,8 @@ SpeciesClusterManager::initExperts()
                         cout << "Continuing: source species" << endl;
                         continue;
                 }
-                //SK: if not a base species check if the number of Expert object is not the number of clusters, meaning one cluster id is missing from the input clusterassignments for that species
+                //SK: if not a base species check if the number of Expert object is not the number of clusters
+		//SK: meaning if one cluster id is missing from the input clusterassignments for that species
                 CLUSTERSET* speciesExpert=aIter->second;
                 if(speciesExpert->size()<maxClusterCnt)
                 {
@@ -268,7 +271,7 @@ SpeciesClusterManager::initExperts()
                                 cout << "Cluster " << c << " for " << aIter->first << endl;
                                 if(speciesExpert->find(c)==speciesExpert->end())
                                 {
-                                        //SK:get expert from baske species and copy to a new object for the current species
+                                        //SK:get expert from base/sources species and copy to a new object for the current species
                                         Expert* i = baseSet->find(c)->second;
                                         Expert* j = new Expert();
                                         //SK: initialize means for the new Expert object from the genes of the base species for this cluster.
@@ -281,44 +284,6 @@ SpeciesClusterManager::initExperts()
         }
 	return 0;
 }
-
-/*
-int 
-SpeciesClusterManager::getExtantClusterAssignment(map<int,map<string,int>*>& clusterAssignments)
-{
-	for(map<int,map<string,INTDBLMAP*>*>::iterator gIter=gammas.begin();gIter!=gammas.end();gIter++)
-	{
-		map<string,INTDBLMAP*>* gValSet=gIter->second;
-		map<string,int>* clustermembers=NULL;
-		if(clusterAssignments.find(gIter->first)==clusterAssignments.end())
-		{
-			clustermembers=new map<string,int>;
-			clusterAssignments[gIter->first]=clustermembers;
-		}
-		else
-		{
-			clustermembers=clusterAssignments[gIter->first];
-		}
-		for(map<string,INTDBLMAP*>::iterator sIter=gValSet->begin();sIter!=gValSet->end();sIter++)
-		{
-			//For each species get the best cluster id for this og
-			INTDBLMAP* gamma_i=sIter->second;
-			double maxPval=-1;
-			int maxexpertID=-1;
-			for(INTDBLMAP_ITER eIter=gamma_i->begin();eIter!=gamma_i->end();eIter++)
-			{
-				if(eIter->second>maxPval)
-				{
-					maxPval=eIter->second;
-					maxexpertID=eIter->first;
-				}
-			}
-			(*clustermembers)[sIter->first]=maxexpertID;
-		}
-	}
-	return 0;
-}*/
-
 
 map<string,CLUSTERSET*>& 
 SpeciesClusterManager::getExtantSpeciesClusters()
@@ -3090,4 +3055,10 @@ SpeciesClusterManager::setSecondStageOption(bool in)
 {
         secondStage=in;
         return 0;
+}
+int
+SpeciesClusterManager::setSouceInitOption(bool in)
+{
+	sourceInit=in;
+	return 0;
 }

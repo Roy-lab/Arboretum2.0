@@ -66,6 +66,7 @@ class SpeciesClusterManager
 	int writeScores(const char*);
 	//SK: function to set the secondStage boolean variable, see below.
 	int setSecondStageOption(bool);
+	int setSouceInitOption(bool);
 	private:
 	//SK: boolean class variable to change the mode of the objects functioning if cross validation is being done instead
 	bool CVMode;
@@ -123,6 +124,7 @@ class SpeciesClusterManager
 	double convThresh;
 	//SK: a boolean to control if the second maximization phase should be done in SpeciesClusterManager::dumpAllInferredClusterAssignments() 
 	bool secondStage;
+	//SK: a boolean to control if the cluster means should be initialized from the source species. 
+	bool sourceInit;
 };
-
 #endif
