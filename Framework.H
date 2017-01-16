@@ -72,6 +72,8 @@ class Framework
 		int readExpressionData(const char* aFName,const char* bFName);
 		int readExpressionDataNonSrc(const char* aFName,const char* bFName);
 		int setPreClustering(bool);
+		int countOGIDSNonSrc(const char* aFName);
+		int setInputMode(bool);
 	private:
 		int learnAncestralClusters();
 		int initClusterTransitionProb();
@@ -150,5 +152,7 @@ class Framework
 		map <string,int> speciesList;
 		map<string,int> geneClusterAssignment;
 		map<int,int> excludedOGList;
+		map<int,int> ogidSet;
+		bool expandInputMode;
 };
 #endif

@@ -1132,6 +1132,7 @@ void print_usage()
 	cout << "-w\t\tA true|false option to overwrite the output directory if it already exists, the default is false." << endl;
 	cout << "-2\t\tA true|false option to run the second optimization step in SpeciesClusterManager::dumpAllInferredClusterAssignments(). Default is True." << endl;
 	cout << "-1\t\tA true|false option to run the merged clustering of the data to generate input clusterassignments. Default is False." << endl;
+	cout << "-1\t\tA true|false optoin for the choice of initializing cluster means from the source species." << endl;
 	cout << " When this option is used the input configuration (-c) file should be in the form: species <tab> expression_data_file" << endl;
 	cout << "-h,--help\t\tReports this usage information." << endl;
 	return;
@@ -1493,7 +1494,11 @@ Framework::readExpressionDataNonSrc(const char* aFName,const char* bFName)
                         {
                                 specName.append(tok);
                         }
-                        else if(tokCnt==1)
+                        else if(tokCnt==1 && !expandInputMode)
+                        {
+                                fileName.append(tok);
+                        }
+			else if(tokCnt==2 && expandInputMode)
                         {
                                 fileName.append(tok);
                         }
@@ -2255,6 +2260,54 @@ Framework::setPreClustering(bool in)
 }
 
 int
+Framework::setInputMode(bool in)
+{	
+	expandInputMode=in;
+	return 0;
+}
+
+int
+Framework::countOGIDSNonSrc(const char* aFName)
+{
+        //SK: start by reading in the cluster assignment information for the merged data
+        ifstream inFile(aFName);
+        char buffer[1024];
+ 	bool first=true;
+        while(inFile.good())
+        {       
+                inFile.getline(buffer,1023);
+                if(strlen(buffer)<=0)
+                {       
+                        continue;
+                }
+                char* tok=strtok(buffer,"\t");
+                int tokCnt=0;
+		if(first)
+		{
+			first=false;
+			continue;
+		}
+                string geneName;
+                while(tok!=NULL)
+                {       
+                        if(tokCnt==0)
+                        {       
+                                geneName.append(tok);
+				size_t pt1=geneName.find("G");
+				size_t pt2=geneName.find("_");
+				string ogid=geneName.substr(pt1+1,pt2-pt1-1);
+				int id=atoi(ogid.c_str());
+				ogidSet[id]=0;
+                        }
+                        tok=strtok(NULL,"\t");
+                        tokCnt++;
+                }
+        }
+        inFile.close();
+	return 0;
+}
+
+int
 main(int argc, char *argv[])
 {
 	int opt=0;
@@ -2294,6 +2347,8 @@ main(int argc, char *argv[])
 	//SK: variable for the option to run the second optimization stage in SpeciesClusterManager::dumpAllInferredClusterAssignments(const char* outputDir) or not
 	bool secondStage=true;
 	bool preClusteringStage=false;
+	bool sourceInit=false;
+	bool expandInputMode=false;
 	//SK: boolean variables for identifying if the required arguments have been set;
 	bool sDefault=false;
 	bool eDefault=false;
@@ -2326,6 +2381,8 @@ main(int argc, char *argv[])
 		{"write",               optional_argument, 0,  'w' },
 		{"pre-clustering",      optional_argument, 0,  '1' },
 		{"second-stage",        optional_argument, 0,  '2' },
+		{"source-init",		optional_argument, 0,  '3' },
+		{"expand-gene-set",	optional_argument, 0,  '4' },
 		{"help",		optional_argument, 0,  'h' },
 		{0,0,0,0}
 	};
@@ -2334,7 +2391,7 @@ main(int argc, char *argv[])
         int oldoptind=optind;
         int condCnt=1;
 	int long_index=0;
-	while ((opt=getopt_long(argc,argv,"s:e:k:t:c:r:o:m:b:i:p:g:d:n:v:w:1:2:h:",long_options,&long_index)) != -1) 
+	while ((opt=getopt_long(argc,argv,"s:e:k:t:c:r:o:m:b:i:p:g:d:n:v:w:1:2:3:4:h:",long_options,&long_index)) != -1) 
 	{
 		//cout << long_index << endl;
 		//cout << opt << optret << endl;
@@ -2516,6 +2573,24 @@ main(int argc, char *argv[])
                                 cout << "Second stage permission: " << my_optarg << endl;
 				break;
                         }
+			case '3':
+			{
+				//SK: take the next string in the command and set the overWrite variable
+                                if(strcmp(my_optarg,"true")==0)sourceInit=true;
+                                if(strcmp(my_optarg,"false")==0)sourceInit=false;
+                                //SK: print out the status of this variable, true or false.
+                                cout << "Source species initialization: " << my_optarg << endl;
+                                break;
+			}
+			case '4':
+                        {
+                                //SK: take the next string in the command and set the overWrite variable
+                                if(strcmp(my_optarg,"true")==0)expandInputMode=true;
+                                if(strcmp(my_optarg,"false")==0)expandInputMode=false;
+                                //SK: print out the status of this variable, true or false.
+                                cout << "Source species initialization: " << my_optarg << endl;
+                                break;
+                        }
 			case 'h':
 			{
                                 print_usage();
@@ -2682,8 +2757,16 @@ main(int argc, char *argv[])
 		char clusterFile[1024];
                 sprintf(clusterFile,"%s/mergedClustering/fold0/clusterassign.txt",outputDir);
 		fw.genSpeciesClustersNonSrc(clusterFile,outputDir);
-		//return 0;		
 	}
+	if(expandInputMode)
+	{
+		fw.setInputMode(true);
+		char mergedFile[1024];
+		sprintf(mergedFile,"%s/mergedData.txt",outputDir);
+		fw.readExpressionDataNonSrc(confFName,mergedFile);
+		fw.countOGIDSNonSrc(mergedFile);
+	}
+	return 0;
 	//SK: check that the program is not being run in cross validation mode
 	if(!(strcmp(mode,"crossvalidation")==0))
 	{
@@ -2738,5 +2821,4 @@ main(int argc, char *argv[])
 		fw.redisplay(outputDir);
 	}
 	return 0;
-
-}//SK: end of main() function
+}//SK: end of main()
