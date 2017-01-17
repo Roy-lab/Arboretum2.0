@@ -67,6 +67,8 @@ class SpeciesClusterManager
 	//SK: function to set the secondStage boolean variable, see below.
 	int setSecondStageOption(bool);
 	int setSouceInitOption(bool);
+	int setPredictionInputMode(bool);
+	int setMergedOGIDSet(map <int,int>& idset);
 	private:
 	//SK: boolean class variable to change the mode of the objects functioning if cross validation is being done instead
 	bool CVMode;
@@ -126,5 +128,11 @@ class SpeciesClusterManager
 	bool secondStage;
 	//SK: a boolean to control if the cluster means should be initialized from the source species. 
 	bool sourceInit;
+	bool predictionInputMode;
+	map <int,int> mergedOGIDS;
+	map <int,int> predictionOGIDS;
+	map <int,int> initialOGIDS;
+	int initPredictionOGIDS();
+	int initPredictionGammas();
 };
 #endif

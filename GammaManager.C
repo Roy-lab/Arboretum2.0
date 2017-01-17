@@ -88,13 +88,16 @@ GammaManager::initGamma(int ogid, string& geneName, string& specName,int clustID
 		gamma->setMaxClusterCnt(maxClusterCnt);
 		gammaSet[ogid]=gamma;
 		GeneTree* gtree=gtMgr.getGeneTree(mor);
-		//cout << "Init from gene tree: " << ogid << endl;
+		if(ogid==750)
+                {
+			cout << "Init from gene tree: " << ogid << endl;
+		}
 		gamma->initUsingGeneTree(gtree);
 		if(gamma->getDupAncestor().length()>0)
 		{
 			ogDupAncMap[ogid]=gamma->getDupAncestor();
 		}
-		if(ogid==3435 ||  ogid==3603 || ogid==1942 || ogid==3440)
+		if(ogid==750)
 		{
 			cout <<"Now showing " << ogid << endl;
 			gamma->showTree();
@@ -208,8 +211,8 @@ GammaManager::estimateNonLeafPosterior()
 	for(map<int,Gamma*>::iterator gIter=gammaSet.begin();gIter!=gammaSet.end();gIter++)
 	{
 		Gamma* gamma_og=gIter->second;
-		//cout <<"Now showing " << gIter->first << endl;
-		if(gIter->first==5236)
+		cout << "Touch " << gIter->first << endl;
+		if(gIter->first==25 || gIter->first==29 || gIter->first==26023)
 		{
 			cout <<"Stop here" << endl;
 			gamma_og->showTree();
@@ -2043,4 +2046,18 @@ GammaManager::getLoss(Gamma::Node* n)
 	}
 	loss=loss+leftchildloss+rightchildloss;
 	return loss;
+}
+
+
+bool 
+GammaManager::checkIfGammaExists(int ogid)
+{
+	if(gammaSet.find(ogid)==gammaSet.end())
+	{
+		return false;
+	}
+	else 
+	{
+		return true;
+	}
 }

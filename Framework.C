@@ -74,6 +74,7 @@ Framework::Framework()
 	vType=CONT;
 	epsThreshold=-1;
         untransformedData[0]='\0';
+	predictionInputMode=false;
 }
 
 Framework::~Framework()
@@ -83,6 +84,10 @@ Framework::~Framework()
 int 
 Framework::readSpeciesData(const char* aFName, const char* rand,const char* Dir)
 {
+	if(predictionInputMode==true)
+        {
+                scMgr.setPredictionInputMode(true);
+	}
 	if(strcmp(rand,"none")==0)
 	{
 		scMgr.setRandom(false);
@@ -159,6 +164,11 @@ Framework::startClustering(const char* aDir)
         scMgr.setSecondStageOption(secondStage);
 	strcpy(outputDir,aDir);
 	scMgr.initExperts();
+	if(predictionInputMode==true)
+	{
+		scMgr.setPredictionInputMode(true);
+		scMgr.setMergedOGIDSet(mergedOgidSet);
+	}
 	cout <<"Total updated parent nodes "<< gammaMgr.getTotalUpdatedParentCnt() << endl; 
 	gammaMgr.showTotalUpdatedParents();
 	initClusterTransitionProb();
@@ -261,7 +271,6 @@ Framework::startCrossValidationCheck(const char* aDir,int cvF,const char* rand,c
                 gammaMgrTst.setOrthogroupReader(&mor);
                 gammaMgrTst.setMaxClusterCnt(maxClusterCnt);
                 gammaMgrTst.setSpeciesDistManager(&sdMgr);
-
 		//SK: the following lines emulate those in Framework::readSpeciesData above, but for scMgrTrn		
 
 		//SK: first set of randomization variable information
@@ -1494,11 +1503,11 @@ Framework::readExpressionDataNonSrc(const char* aFName,const char* bFName)
                         {
                                 specName.append(tok);
                         }
-                        else if(tokCnt==1 && !expandInputMode)
+                        else if(tokCnt==1 && !predictionInputMode)
                         {
                                 fileName.append(tok);
                         }
-			else if(tokCnt==2 && expandInputMode)
+			else if(tokCnt==2 && predictionInputMode)
                         {
                                 fileName.append(tok);
                         }
@@ -2260,9 +2269,9 @@ Framework::setPreClustering(bool in)
 }
 
 int
-Framework::setInputMode(bool in)
+Framework::setPredictionInputMode(bool in)
 {	
-	expandInputMode=in;
+	predictionInputMode=in;
 	return 0;
 }
 
@@ -2287,17 +2296,25 @@ Framework::countOGIDSNonSrc(const char* aFName)
 			first=false;
 			continue;
 		}
-                string geneName;
+                string Name;
                 while(tok!=NULL)
                 {       
                         if(tokCnt==0)
                         {       
-                                geneName.append(tok);
-				size_t pt1=geneName.find("G");
-				size_t pt2=geneName.find("_");
-				string ogid=geneName.substr(pt1+1,pt2-pt1-1);
+                                Name.append(tok);
+				size_t pt1=Name.find("G");
+				size_t pt2=Name.find("_");
+				string ogid=Name.substr(pt1+1,pt2-pt1-1);
 				int id=atoi(ogid.c_str());
-				ogidSet[id]=0;
+				if(id==26023)
+				{
+					cout << endl << endl << endl;
+					cout << Name << endl;
+					cout << ogid << endl;
+					cout << id << endl;
+					cout << endl << endl << endl;
+				}
+				mergedOgidSet[id]=0;
                         }
                         tok=strtok(NULL,"\t");
                         tokCnt++;
@@ -2348,7 +2365,7 @@ main(int argc, char *argv[])
 	bool secondStage=true;
 	bool preClusteringStage=false;
 	bool sourceInit=false;
-	bool expandInputMode=false;
+	bool predictionInputMode=false;
 	//SK: boolean variables for identifying if the required arguments have been set;
 	bool sDefault=false;
 	bool eDefault=false;
@@ -2585,8 +2602,8 @@ main(int argc, char *argv[])
 			case '4':
                         {
                                 //SK: take the next string in the command and set the overWrite variable
-                                if(strcmp(my_optarg,"true")==0)expandInputMode=true;
-                                if(strcmp(my_optarg,"false")==0)expandInputMode=false;
+                                if(strcmp(my_optarg,"true")==0)predictionInputMode=true;
+                                if(strcmp(my_optarg,"false")==0)predictionInputMode=false;
                                 //SK: print out the status of this variable, true or false.
                                 cout << "Source species initialization: " << my_optarg << endl;
                                 break;
@@ -2758,15 +2775,14 @@ main(int argc, char *argv[])
                 sprintf(clusterFile,"%s/mergedClustering/fold0/clusterassign.txt",outputDir);
 		fw.genSpeciesClustersNonSrc(clusterFile,outputDir);
 	}
-	if(expandInputMode)
+	if(predictionInputMode)
 	{
-		fw.setInputMode(true);
+		fw.setPredictionInputMode(true);
 		char mergedFile[1024];
 		sprintf(mergedFile,"%s/mergedData.txt",outputDir);
 		fw.readExpressionDataNonSrc(confFName,mergedFile);
 		fw.countOGIDSNonSrc(mergedFile);
 	}
-	return 0;
 	//SK: check that the program is not being run in cross validation mode
 	if(!(strcmp(mode,"crossvalidation")==0))
 	{

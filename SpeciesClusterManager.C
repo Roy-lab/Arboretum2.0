@@ -43,10 +43,18 @@ SpeciesClusterManager::SpeciesClusterManager()
 	r=NULL;
 	gnm.readGeneNames();
 	rseed=-1;
+	predictionInputMode=false;
 }
 
 SpeciesClusterManager::~SpeciesClusterManager()
 {
+}
+
+int
+SpeciesClusterManager::setPredictionInputMode(bool in)
+{
+	predictionInputMode=in;
+	return 0;
 }
 
 int
@@ -180,10 +188,14 @@ SpeciesClusterManager::readSpeciesData(const char* clusterFName,const char* Dir)
 			{
 				speciesName.append(tok);
 			}
-			else if(tokCnt==1)
+			else if(tokCnt==1 && !predictionInputMode)
 			{
 				expressionFName.append(tok);
 			}
+			else if(tokCnt==2 && predictionInputMode)
+                        {
+                                expressionFName.append(tok);
+                        }
 			tok=strtok(NULL,"\t");
 			tokCnt++;
 		}
@@ -271,7 +283,7 @@ SpeciesClusterManager::initExperts()
                                 cout << "Cluster " << c << " for " << aIter->first << endl;
                                 if(speciesExpert->find(c)==speciesExpert->end())
                                 {
-                                        //SK:get expert from base/sources species and copy to a new object for the current species
+                                        //SK:get expert from base/source species and copy to a new object for the current species
                                         Expert* i = baseSet->find(c)->second;
                                         Expert* j = new Expert();
                                         //SK: initialize means for the new Expert object from the genes of the base species for this cluster.
@@ -297,21 +309,48 @@ SpeciesClusterManager::estimateExpertParameters(const char* outputDir)
 	double currScore=0;
 	bool convergence=false;
 	int iter=0;
-	/*  char testDir[300];
-        sprintf(testDir,"%s/iteration0",outputDir);
-        char outputDirCmd[1024];
-        //SK: write command to second variable.
-        sprintf(outputDirCmd,"mkdir -p %s",testDir);
-        //SK: run the system command to create a new, empty version of the directory.
-        system(outputDirCmd);
-        gammaMgr->estimateNonLeafPosterior();
-        gammaMgr->estimateTransitionProbability();
-        gammaMgr->getAllClusterAssignments_Grouped(allClusterAssignmentsGrouped);
-        dumpAllInferredClusterAssignments(testDir,iter);
-        showClusters_Extant(testDir);
-        showClusters_Ancestral(testDir);
-        cout << "Now exiting" << endl;
-        exit;*/
+	if(predictionInputMode)
+	{
+		cout << "Entering prediction mode" << endl;
+		char testDir[300];
+		sprintf(testDir,"%s/prediction_input",outputDir);
+		char outputDirCmd[1024];
+		//SK: write command to second variable.
+		sprintf(outputDirCmd,"mkdir -p %s",testDir);
+		//SK: run the system command to create a new, empty version of the directory.
+		system(outputDirCmd);
+		expectationStep();
+                //maximizationStep();
+		//gammaMgr->estimateNonLeafPosterior();
+		//gammaMgr->estimateTransitionProbability();
+		//gammaMgr->getAllClusterAssignments_Grouped(allClusterAssignmentsGrouped);	
+		dumpAllInferredClusterAssignments(testDir,iter);
+		showClusters_Extant(testDir);
+		showClusters_Ancestral(testDir);
+		initPredictionOGIDS();
+        	initPredictionGammas();
+		char testDir2[300];
+                sprintf(testDir2,"%s/prediction",outputDir);
+                char outputDirCmd2[1024];
+                //SK: write command to second variable.
+                sprintf(outputDirCmd2,"mkdir -p %s",testDir2);
+                //SK: run the system command to create a new, empty version of the directory.
+                system(outputDirCmd2);
+		cout << "Entering expectationStep for additional orthogroups" << endl;
+		expectationStep();
+		//cout << "Entering maximizationStep for additional orthogroups" << endl;
+                //maximizationStep();
+                cout << "Exiting expectationStep" << endl;
+		//gammaMgr->estimateNonLeafPosterior();
+                //gammaMgr->estimateTransitionProbability();
+                //gammaMgr->getAllClusterAssignments_Grouped(allClusterAssignmentsGrouped);
+                dumpAllInferredClusterAssignments(testDir2,iter);
+		cout << "Writting clusters";
+                showClusters_Extant(testDir2);
+                showClusters_Ancestral(testDir2);
+		cout << "Exiting prediction mode" << endl;
+		exit;
+	}
 	//SK: use nMaxIterations to control this while loop
 	//SK: this is the maximum number of iterations to run without convergence
 	while((!convergence)&&(iter<nMaxIterations))
@@ -426,6 +465,14 @@ SpeciesClusterManager::readClusters(string& specName, const char* fName)
 		(*geneset)[genename]=clustid;
 		expert->assignGeneToExpert(genename.c_str());
 		gammaMgr->initGamma(ogid,genename,specName,clustid);
+		if(predictionInputMode)
+		{
+			initialOGIDS[ogid]=0;
+			if(ogid==26023)
+			{
+				cout << "Added 26023 to initial set of OGs." << endl;
+			}
+		}
 	}
 	cout <<"Read " << geneset->size() << " genes in " << specName << endl;
 	inFile.close();
@@ -446,7 +493,6 @@ SpeciesClusterManager::maximizationStep()
 	}
 	return 0;
 }
-
 
 int
 SpeciesClusterManager::expectationStep()
@@ -2385,151 +2431,6 @@ SpeciesClusterManager::dumpAllInferredClusters_LCA(const char* outputDir,vector<
 	return 0;
 }
 
-
-
-
-/*
-int
-SpeciesClusterManager::dumpAllInferredClusters_Scerwise_Dup(const char* outputDir,vector<string>& speciesList)
-{	
-	char outputFName[1024];
-	sprintf(outputFName,"%s/allspecies_duplicates_clusterassign_brk.txt",outputDir);
-	string specKey(srcSpecies);
-	map<string,int>* speciesGenes=speciesClusterSet_Genewise[specKey];
-	ofstream oFile(outputFName);
-	CLUSTERSET* expertSet=speciesExpertSet[specKey];
-	map<int,MappedOrthogroup*>& allOgs=mor->getMappedOrthogroups();
-	map<string,int> shownGenes;
-	for(CLUSTERSET_ITER cIter=expertSet->begin();cIter!=expertSet->end();cIter++)
-	{
-		Expert* e=cIter->second;
-		map<string,int>& geneSet=e->getGeneSet();
-		for(map<string,int>::iterator gIter=geneSet.begin();gIter!=geneSet.end();gIter++)
-		{
-			if(shownGenes.find(gIter->first)!=shownGenes.end())
-			{
-				continue;
-			}
-			MappedOrthogroup* mgrp=mor->getMappedOrthogroup(gIter->first.c_str(),srcSpecies);
-			if(mgrp->getCnt()<2)
-			{
-				continue;
-			}
-			map<string,int>* clusterAssign=mappedClusterAssignment[ogid];
-			GeneMap* dupspecies_GeneMap=mgrp->getSpeciesHits(srcName);
-			if(dupspecies_GeneMap==NULL)
-			{
-				cout <<"Warning! No " << srcSpecies << " gene in OGid "<<  << endl;
-				continue;
-			}
-			bool dupInScer=false;
-			//get the number of species that have 2 genes
-			map<string,int> speciesWithDupgenes;
-			for(map<string,int>::iterator aIter=speciesList.begin();aIter!=speciesList.end();aIter++)
-			{
-				GeneMap* specRep=mgrp->getSpeciesHits(aIter->first.c_str());
-				if(specRep==NULL)
-				{
-					continue;
-				}	
-				if(specRep->getGeneSet().size()>=2)
-				{
-					speciesWithDupGenes[aIter->first]=0;
-				}
-			}
-			if(speciesWithDupGenes.find(srcSpecies)!=speciesWithDupGenes.end())
-			{
-				dupInScer=true;
-			}
-			string dupSpecies(srcName);
-			if(!dupInScer)
-			{
-				dupSpecies.clear();
-				dupSpecies.append(speciesWithDupgenes.begin()->first.c_str());
-				dupspecies_GeneMap=mgrp->getSpeciesHits(dupSpecies.c_str());
-			}
-			for(map<string,int>::iterator cIter=clusterAssign->begin();cIter!=clusterAssign->end();cIter++)
-			{
-				strcpy(geneName,cIter->first.c_str());
-				char* pos=strchr(geneName,':');
-				if(pos==NULL)
-				{
-					cout <<"Bad format " << endl;	
-					exit(0);
-				}
-				*pos='\0';
-				string specName(pos+1);
-				geneAssign[geneName]=cIter->second;
-			}
-			map<string,map<string,STRINTMAP*>*>& dupGenes=dupSpecies_GeneMap->getGeneSet();
-			for(map<string,map<string,STRINTMAP*>*>::iterator hIter=dupGenes.begin();hIter!=dupGenes.end();hIter++)
-			{
-				oFile << gnm.getCommonName(hIter->first.c_str());
-				shownGenes[hIter->first]=0;
-				map<string,int> specAssign;
-				int clusterID=-1;
-				if(geneAssign.find(hIter->first)!=geneAssign.end())
-				{
-					clusterID=geneAssign[hIter->first];
-				}
-				specAssign[srcSpecies]=clusterID;
-				map<string,STRINTMAP*>* hitsInOthers=hIter->second;
-				for(int s=0;s<speciesList.size();s++)
-				{
-					if(strcmp(speciesLis[s].c_str(),"Scer")==0)
-					{
-						continue;
-					}
-					//This means the gene is altogether missing in the species
-					int clusterID=-2;
-					if(hitsInOthers->find(speciesList[s])==hitsInOthers->end())
-					{
-						clusterID=-2;
-					}
-					else
-					{
-						map<string,int>* genesInOthers=(*hitsInOthers)[speciesList[s]];
-						if(genesInOthers->size()>1)
-						{
-							cout <<"Warning! Multiple hits to " << hIter->first << " from " << speciesList[s] << endl;
-						}
-						string& orthogene=genesInOthers->begin();
-						if(geneAssign.find(orthogene)!=geneAssignAssign.end())
-						{	
-							clusterID=geneAssign[orthogene];
-						}	
-						else
-						{
-							clusterID=-1;
-						}
-						shownGenes[orthogene]=1;
-					}
-					specAssign[speciesList[s]]=clusterID;
-				}
-				for(map<string,int>::iterator sIter=specAssign.begin();sIter!=specAssign.end();sIter++)
-				{
-					oFile <<"\t" << sIter->second;
-				}
-				oFile << endl;	
-				specAssign.clear();
-			}
-			
-			geneAssign.clear();
-		}
-		oFile <<"Dummy" << cIter->first;
-		for(int s=0;s<speciesList.size();s++)
-		{
-			oFile <<"\t" <<"-100";
-		}
-		oFile <<endl;
-	}
-	oFile.close();
-	return 0;
-}*/
-
-
-
-
 int
 SpeciesClusterManager::dumpAllInferredClusterAssignments(const char* outputDir)
 {
@@ -2774,6 +2675,70 @@ SpeciesClusterManager::getGenesForSpecies(string& specName)
 }
 
 int
+SpeciesClusterManager::initPredictionOGIDS()
+{
+	for(map<int,int>::iterator mIter=mergedOGIDS.begin();mIter!=mergedOGIDS.end();mIter++)
+	{
+		int id=mIter->first;
+		if(initialOGIDS.find(id)==initialOGIDS.end())
+		{
+			predictionOGIDS[id]=0;
+		}
+	}
+	return 0;
+}
+
+int
+SpeciesClusterManager::initPredictionGammas()
+{
+	cout << "Starting SpeciesClusterManager::initPredictionGamma()" << endl;
+	map<int,MappedOrthogroup*> ogSet=mor->getMappedOrthogroups();
+	for(map<int,int>::iterator oIter=predictionOGIDS.begin();oIter!=predictionOGIDS.end();oIter++)
+	{
+		//SK: get set of orthogroups 
+		MappedOrthogroup* grp=ogSet.find(oIter->first)->second;
+                //SK: get gene set information 
+                map<int,map<string,string>*>& GS=grp->getGeneSets();
+                //SK: loop over gene set information for each duplication level of the orthogroup
+                for(map<int,map<string,string>*>::iterator gsIter=GS.begin();gsIter!=GS.end();gsIter++)
+                {
+                        map<string,string>* SET=gsIter->second;
+                        //SK: loop over the gene memevers of this duplication level of this orthogroup
+                        for(map<string,string>::iterator igsIter=SET->begin();igsIter!=SET->end();igsIter++)
+                        {
+				string specName=igsIter->first;
+				string geneName=igsIter->second;
+				//cout << specName << "\t" << geneName << endl;
+				if(speciesExprSet.find(specName)==speciesExprSet.end())
+				{
+					continue;
+				}	
+				GeneExpManager* geMgr=speciesExprSet.find(specName)->second;
+				if(geMgr==NULL)
+				{
+					continue;
+				}
+				//SK: obtain the expression profile for this gene
+				vector<double>* exprProf=geMgr->getExp(geneName);
+				//SK: ckeck if the expression profile is null and continue if it is
+				if(exprProf==NULL)
+				{
+					continue;
+				}
+				if(gammaMgr->checkIfGammaExists(oIter->first))
+				{
+					continue;
+				}
+				//expert->assignGeneToExpert(geneName.c_str());
+                		gammaMgr->initGamma(oIter->first,geneName,specName,0);
+			}
+		}
+	}
+	cout << "Exiting SpeciesClusterManager::initPredictionGamma()" << endl;
+	return 0;
+}
+
+int
 SpeciesClusterManager::generateData(const char* outputDir, string& lcaName,vector<string>& speciesList)
 {
 	map<int,map<string,int>*> clusterAssignments;
@@ -2874,7 +2839,7 @@ SpeciesClusterManager::generateData(const char* outputDir, string& lcaName,vecto
 				CLUSTERSET* clusterSet=speciesExpertSet[sIter->first];
 				Expert* e=(*clusterSet)[sIter->second];
 				e->generateSample(r,sampleValues);
-				ofstream* oFile=filePtrSet[sIter->first];
+					ofstream* oFile=filePtrSet[sIter->first];
 				(*oFile) << aName;
 				for(int j=0;j<sampleValues.size();j++)
 				{
@@ -3056,9 +3021,17 @@ SpeciesClusterManager::setSecondStageOption(bool in)
         secondStage=in;
         return 0;
 }
+
 int
 SpeciesClusterManager::setSouceInitOption(bool in)
 {
 	sourceInit=in;
+	return 0;
+}
+
+int
+SpeciesClusterManager::setMergedOGIDSet(map <int,int>& midset)
+{
+	mergedOGIDS=midset;
 	return 0;
 }

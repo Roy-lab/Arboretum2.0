@@ -55,6 +55,7 @@ class GammaManager
 	{
 		return gtMgr.getTotalAdditionalParents();
 	}
+	bool checkIfGammaExists(int);
 	int showTotalUpdatedParents();
 	int sampleAllClusterAssignments(map<int,map<string,int>*>& allClusterAssignments);
 	private:
