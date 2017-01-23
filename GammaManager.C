@@ -90,7 +90,7 @@ GammaManager::initGamma(int ogid, string& geneName, string& specName,int clustID
 		GeneTree* gtree=gtMgr.getGeneTree(mor);
 		if(ogid==750)
                 {
-			cout << "Init from gene tree: " << ogid << endl;
+			//cout << "Init from gene tree: " << ogid << endl;
 		}
 		gamma->initUsingGeneTree(gtree);
 		if(gamma->getDupAncestor().length()>0)
@@ -99,7 +99,7 @@ GammaManager::initGamma(int ogid, string& geneName, string& specName,int clustID
 		}
 		if(ogid==750)
 		{
-			cout <<"Now showing " << ogid << endl;
+			//cout <<"Now showing " << ogid << endl;
 			gamma->showTree();
 		}
 	}
@@ -211,7 +211,7 @@ GammaManager::estimateNonLeafPosterior()
 	for(map<int,Gamma*>::iterator gIter=gammaSet.begin();gIter!=gammaSet.end();gIter++)
 	{
 		Gamma* gamma_og=gIter->second;
-		cout << "Touch " << gIter->first << endl;
+		//cout << "GammaManager::estimateNonLeafPosterior " << gIter->first << endl;
 		if(gIter->first==25 || gIter->first==29 || gIter->first==26023)
 		{
 			cout <<"Stop here" << endl;

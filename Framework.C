@@ -2306,14 +2306,6 @@ Framework::countOGIDSNonSrc(const char* aFName)
 				size_t pt2=Name.find("_");
 				string ogid=Name.substr(pt1+1,pt2-pt1-1);
 				int id=atoi(ogid.c_str());
-				if(id==26023)
-				{
-					cout << endl << endl << endl;
-					cout << Name << endl;
-					cout << ogid << endl;
-					cout << id << endl;
-					cout << endl << endl << endl;
-				}
 				mergedOgidSet[id]=0;
                         }
                         tok=strtok(NULL,"\t");

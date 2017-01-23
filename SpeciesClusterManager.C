@@ -349,7 +349,7 @@ SpeciesClusterManager::estimateExpertParameters(const char* outputDir)
                 showClusters_Extant(testDir2);
                 showClusters_Ancestral(testDir2);
 		cout << "Exiting prediction mode" << endl;
-		exit;
+		exit(0);
 	}
 	//SK: use nMaxIterations to control this while loop
 	//SK: this is the maximum number of iterations to run without convergence
@@ -465,14 +465,6 @@ SpeciesClusterManager::readClusters(string& specName, const char* fName)
 		(*geneset)[genename]=clustid;
 		expert->assignGeneToExpert(genename.c_str());
 		gammaMgr->initGamma(ogid,genename,specName,clustid);
-		if(predictionInputMode)
-		{
-			initialOGIDS[ogid]=0;
-			if(ogid==26023)
-			{
-				cout << "Added 26023 to initial set of OGs." << endl;
-			}
-		}
 	}
 	cout <<"Read " << geneset->size() << " genes in " << specName << endl;
 	inFile.close();
@@ -2680,7 +2672,7 @@ SpeciesClusterManager::initPredictionOGIDS()
 	for(map<int,int>::iterator mIter=mergedOGIDS.begin();mIter!=mergedOGIDS.end();mIter++)
 	{
 		int id=mIter->first;
-		if(initialOGIDS.find(id)==initialOGIDS.end())
+		if(workingOrthoGroups.find(id)==workingOrthoGroups.end())
 		{
 			predictionOGIDS[id]=0;
 		}
@@ -2708,7 +2700,6 @@ SpeciesClusterManager::initPredictionGammas()
                         {
 				string specName=igsIter->first;
 				string geneName=igsIter->second;
-				//cout << specName << "\t" << geneName << endl;
 				if(speciesExprSet.find(specName)==speciesExprSet.end())
 				{
 					continue;
@@ -2725,12 +2716,8 @@ SpeciesClusterManager::initPredictionGammas()
 				{
 					continue;
 				}
-				if(gammaMgr->checkIfGammaExists(oIter->first))
-				{
-					continue;
-				}
-				//expert->assignGeneToExpert(geneName.c_str());
                 		gammaMgr->initGamma(oIter->first,geneName,specName,0);
+				(*speciesClusterSet_Genewise.find(specName)->second)[geneName]=0;
 			}
 		}
 	}
