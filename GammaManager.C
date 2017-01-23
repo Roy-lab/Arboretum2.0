@@ -191,13 +191,9 @@ GammaManager::estimateLeafAlpha(int ogid,map<int,double>& prob,string& geneName,
 		{
 		 	cout <<"Posterior is negative for  "<< geneName <<" species " << specName << "cluster id "  << pIter->first << " pval=" << pval << endl;
 		}
-		if(ogid==3946)
-		{
-			cout << pIter->first << "\t" << pval << endl;
-		}
 		m->alpha->setValue(pval,0,pIter->first);
 	}
-	if(ogid==3946) 
+	if(0) 
         {
                 cout << "Leaf alpha: " <<specName <<" " << m->name << endl;
                 m->alpha->showMatrix();
@@ -212,7 +208,7 @@ GammaManager::estimateNonLeafPosterior()
 	{
 		Gamma* gamma_og=gIter->second;
 		//cout << "GammaManager::estimateNonLeafPosterior " << gIter->first << endl;
-		if(gIter->first==25 || gIter->first==29 || gIter->first==26023)
+		if(0) //|| gIter->first==25 || gIter->first==29 || gIter->first==26023)
 		{
 			cout <<"Stop here" << endl;
 			gamma_og->showTree();
