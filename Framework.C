@@ -2399,7 +2399,7 @@ main(int argc, char *argv[])
 		{"pre-clustering",      optional_argument, 0,  '1' },
 		{"second-stage",        optional_argument, 0,  '2' },
 		{"source-init",		optional_argument, 0,  '3' },
-		{"expand-gene-set",	optional_argument, 0,  '4' },
+		{"prediction-mode",	optional_argument, 0,  '4' },
 		{"help",		optional_argument, 0,  'h' },
 		{0,0,0,0}
 	};
