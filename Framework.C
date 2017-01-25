@@ -1126,7 +1126,7 @@ void print_usage()
 	cout << "This file of the form: species <tab> cluster_assign_file <tab> expression_data_file" << endl;
 	cout << "-r\t\tOption to randomize input cluster assignments rseed|none|yes." << endl;
 	cout << "-o\t\tOutput directory." << endl;
-	cout << "-m\t\tDefines the mode in which the algorithm is to be used; learn|generate|visualize|crossvalidate are the options." << endl;
+	cout << "-m\t\tDefines the mode in which the algorithm is to be used; learn|generate|visualize|crossvalidate|predict are the options." << endl;
 	cout << "-b\t\tA well annotated species to which gene names of other species will be mapped in the *_clusterassign.txt output." << endl;
 	cout << "-i\t\tInitialization method for transition probabilties for cluster membership across species, uniform|branchlength." << endl;
 	cout << "-p\t\tInitial transition probability values, either a single value or a file defining values every specie tree branch." << endl;
@@ -1139,9 +1139,9 @@ void print_usage()
 	cout << "-n\t\tThe maximum number of iterations if convergence condition is not met." << endl;
 	cout << "-v\t\tThis option turns on a cross validation test of the clustering; and defines the number of partitions to use." << endl;
 	cout << "-w\t\tA true|false option to overwrite the output directory if it already exists, the default is false." << endl;
-	cout << "-2\t\tA true|false option to run the second optimization step in SpeciesClusterManager::dumpAllInferredClusterAssignments(). Default is True." << endl;
-	cout << "-1\t\tA true|false option to run the merged clustering of the data to generate input clusterassignments. Default is False." << endl;
-	cout << "-1\t\tA true|false optoin for the choice of initializing cluster means from the source species." << endl;
+	cout << "-l\t\tA true|false option to run the last EM optimization step in SpeciesClusterManager::dumpAllInferredClusterAssignments(). Default is True." << endl;
+	cout << "-f\t\tA true|false option to run the merged clustering of the data to generate input clusterassignments. Default is False." << endl;
+	cout << "-u\t\tA true|false option for updating the cluster means from the source species." << endl;
 	cout << " When this option is used the input configuration (-c) file should be in the form: species <tab> expression_data_file" << endl;
 	cout << "-h,--help\t\tReports this usage information." << endl;
 	return;
@@ -2388,10 +2388,9 @@ main(int argc, char *argv[])
 		{"num-iter",            optional_argument, 0,  'n' },
 		{"validation-fold",	optional_argument, 0,  'v' },
 		{"write",               optional_argument, 0,  'w' },
-		{"pre-clustering",      optional_argument, 0,  '1' },
-		{"second-stage",        optional_argument, 0,  '2' },
-		{"source-init",		optional_argument, 0,  '3' },
-		{"prediction-mode",	optional_argument, 0,  '4' },
+		{"first-clustering",      optional_argument, 0,  'f' },
+		{"last-stage",        optional_argument, 0,  'l' },
+		{"update-source",		optional_argument, 0,  'u' },
 		{"help",		optional_argument, 0,  'h' },
 		{0,0,0,0}
 	};
@@ -2564,7 +2563,7 @@ main(int argc, char *argv[])
 				cout << "Overwrite permission: " << my_optarg << endl;
 				break;
 			}
-			case '1':
+			case 'f':
                         {
                                 //SK: take the next string in the command and set the overWrite variable
                                 if(strcmp(my_optarg,"true")==0)preClusteringStage=true;
@@ -2573,7 +2572,7 @@ main(int argc, char *argv[])
                                 cout << "Pre-clustering stage: " << my_optarg << endl;
 				break;	
                         }
-			case '2':
+			case 'l':
                         {
                                 //SK: take the next string in the command and set the overWrite variable
                                 if(strcmp(my_optarg,"true")==0)secondStage=true;
@@ -2582,7 +2581,7 @@ main(int argc, char *argv[])
                                 cout << "Second stage permission: " << my_optarg << endl;
 				break;
                         }
-			case '3':
+			case 'u':
 			{
 				//SK: take the next string in the command and set the overWrite variable
                                 if(strcmp(my_optarg,"true")==0)sourceInit=true;
@@ -2591,15 +2590,6 @@ main(int argc, char *argv[])
                                 cout << "Source species initialization: " << my_optarg << endl;
                                 break;
 			}
-			case '4':
-                        {
-                                //SK: take the next string in the command and set the overWrite variable
-                                if(strcmp(my_optarg,"true")==0)predictionInputMode=true;
-                                if(strcmp(my_optarg,"false")==0)predictionInputMode=false;
-                                //SK: print out the status of this variable, true or false.
-                                cout << "Source species initialization: " << my_optarg << endl;
-                                break;
-                        }
 			case 'h':
 			{
                                 print_usage();
@@ -2767,6 +2757,10 @@ main(int argc, char *argv[])
                 sprintf(clusterFile,"%s/mergedClustering/fold0/clusterassign.txt",outputDir);
 		fw.genSpeciesClustersNonSrc(clusterFile,outputDir);
 	}
+	if(strcmp(mode,"prediction")==0)
+	{
+		predictionInputMode==true;
+	}
 	if(predictionInputMode)
 	{
 		fw.setPredictionInputMode(true);
@@ -2799,7 +2793,7 @@ main(int argc, char *argv[])
 	}
 	//run the program in the selected mode
 	//SK: if in learn mode
-	if(strcmp(mode,"learn")==0)
+	if(strcmp(mode,"learn")==0 || strcmp(mode,"prediction")==0)
 	{
 		//SK: apply the learning algorithm to infer the arboretum model and clusters
 		fw.startClustering(outputDir);
