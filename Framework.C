@@ -166,6 +166,7 @@ Framework::startClustering(const char* aDir)
 	scMgr.initExperts();
 	if(predictionInputMode==true)
 	{
+		cout << "Initializing prediction mode" << endl;
 		scMgr.setPredictionInputMode(true);
 		scMgr.setMergedOGIDSet(mergedOgidSet);
 	}
@@ -2399,7 +2400,7 @@ main(int argc, char *argv[])
         int oldoptind=optind;
         int condCnt=1;
 	int long_index=0;
-	while ((opt=getopt_long(argc,argv,"s:e:k:t:c:r:o:m:b:i:p:g:d:n:v:w:1:2:3:4:h:",long_options,&long_index)) != -1) 
+	while ((opt=getopt_long(argc,argv,"s:e:k:t:c:r:o:m:b:i:p:g:d:n:v:w:f:l:u:h:",long_options,&long_index)) != -1) 
 	{
 		//cout << long_index << endl;
 		//cout << opt << optret << endl;
@@ -2759,10 +2760,11 @@ main(int argc, char *argv[])
 	}
 	if(strcmp(mode,"prediction")==0)
 	{
-		predictionInputMode==true;
+		predictionInputMode=true;
 	}
 	if(predictionInputMode)
 	{
+		cout << "Entering prediction mode" << endl;
 		fw.setPredictionInputMode(true);
 		char mergedFile[1024];
 		sprintf(mergedFile,"%s/mergedData.txt",outputDir);
