@@ -33,7 +33,7 @@ The following are non-required options.
  When this option is used the input configuration (-c) file should be in the form: species <tab> expression_data_file <endl>
 -u		A true|false option for updating the cluster means from the source species. Note this should only be attempted if the species all have the same number of data points. Otherwise it is not stringently requred that all species do have the same number of data points per gene, but all genes represented within each species must of course have the same number of data points. 
 -h,--help		Reports this usage information.
-A note on prediction mode: generally used when you have an arboretum clustering result to which you have applied a reordering, and hence need to reinfer ancestral assignments for :u
+A note on prediction mode: generally used when you have an arboretum clustering result to which you have applied a reordering, and hence need to infer assignments for additional genes ortho-groups, or to infer ancestral assignments.
 
 The short tutorial on usisng this updated code is as follows:
 
@@ -45,7 +45,7 @@ The -g argument option will point to the gene tree directory that you want to us
 
 The "-f true" argument option is the new option that will allow you to tell the program to merged the data across species, and to generate the initial species clusterassignments from GMM clustering of the meregd data. Three sets of outputs will be produced:
 
-        1. In the Arboretum output directory a mergedData.txt file will appear, which is the data merged across all species. There will be several companion files that begin with mergedData that format this information as input for the GMM clustering process.
+        1. In the Arboretum output directory a mergedData.txt file will appear, which is the data merged across all species. There will be several companion files that begin with "mergedData" that format this information as input for the GMM clustering process.
 
         2. In the output directory there will be the mergedClustering sub-directory, which contains the GMM clustering results fo the merged data.
 
