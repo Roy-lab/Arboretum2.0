@@ -46,6 +46,7 @@ class Gamma
 	map<int,double>* getDataLL(string&);
 	string& getDupAncestor();
 	double ll;
+	bool isGeneMapMember(string);
 	private:
 	Gamma::Node* initSubtree(GeneTree* gtreenode);
 	Gamma::Node* initSubtree(GeneTree* gtreenode,string& rootname);

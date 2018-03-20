@@ -334,3 +334,17 @@ Gamma::showTree(Gamma::Node* node)
 
 	return 0;
 }
+
+bool 
+Gamma::isGeneMapMember(string gene)
+{
+	if(geneMap.find(gene)!=geneMap.end())
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+

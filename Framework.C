@@ -164,41 +164,154 @@ Framework::startClustering(const char* aDir)
         scMgr.setSecondStageOption(secondStage);
 	strcpy(outputDir,aDir);
 	scMgr.initExperts();
-	if(predictionInputMode==true)
+	cout <<"Total updated parent nodes "<< gammaMgr.getTotalUpdatedParentCnt() << endl;
+        gammaMgr.showTotalUpdatedParents();
+	if(predictionInputMode==false)
 	{
-		cout << "Initializing prediction mode" << endl;
-		scMgr.setPredictionInputMode(true);
+		initClusterTransitionProb();
 		scMgr.setMergedOGIDSet(mergedOgidSet);
+		vector<string> speciesList;
+		sdMgr.getSpeciesListPrefix(speciesList);
+		//SK: initialize cluster assignments for genes in orthogroups that can be added from the non-source species merged data in prediction mode
+		scMgr.setPredictionInputMode(true);
+		scMgr.executePredictionMode(outputDir,speciesList);
+		scMgr.setPredictionInputMode(false);
+		//SK:at this point the cluster assingments should be initialized for all genes in orthogrous that can be used.
+		//SK:these clusters assingments will be in the prediction subdirectory of the output directory.  
+		scMgr.estimateExpertParameters(outputDir);
+		double newScore=scMgr.getScore();
+		//SK: set the second stage parameter
+		scMgr.setSecondStageOption(secondStage);
+		scMgr.dumpAllInferredClusterAssignments(outputDir);
+		double newScore_PP=scMgr.getScore();
+		cout <<"Score before PP " << newScore << "\t" << " Score after PP " << newScore_PP << endl;
+		scMgr.showClusters_Extant(outputDir);
+		scMgr.showClusters_Ancestral(outputDir);
+		scMgr.showMeans(outputDir);
+		//SK: write out scores
+		scMgr.writeScores(outputDir);
+		//This is only for visualization purposes
+		for(int i=0;i<speciesList.size();i++)
+		{	
+			cout << speciesList[i] << endl;
+		}
+		scMgr.dumpAllInferredClusters_ScerwiseGrouped(outputDir,speciesList);
+		scMgr.dumpAllInferredClusters_LCA(outputDir,speciesList,sdMgr.getRoot()->name);
+		scMgr.showClusters_Ancestral(outputDir);
+		scMgr.dumpAllInferredClusterGammas(outputDir,speciesList);
+		sdMgr.showInferredConditionals(outputDir);
+		sdMgr.showInferredConditionals_ML(outputDir);
 	}
-	cout <<"Total updated parent nodes "<< gammaMgr.getTotalUpdatedParentCnt() << endl; 
-	gammaMgr.showTotalUpdatedParents();
-	initClusterTransitionProb();
-	scMgr.estimateExpertParameters(outputDir);
-	double newScore=scMgr.getScore();
-	//SK: set the second stage parameter
-	scMgr.setSecondStageOption(secondStage);
-	scMgr.dumpAllInferredClusterAssignments(outputDir);
-	double newScore_PP=scMgr.getScore();
-	cout <<"Score before PP " << newScore << "\t" << " Score after PP " << newScore_PP << endl;
-	scMgr.showClusters_Extant(outputDir);
-	scMgr.showClusters_Ancestral(outputDir);
-	scMgr.showMeans(outputDir);
-	//SK: write out scores
-        scMgr.writeScores(outputDir);
-	//This is only for visualization purposes
-	vector<string> speciesList;
-	sdMgr.getSpeciesListPrefix(speciesList);
-	for(int i=0;i<speciesList.size();i++)
-	{	
-		cout << speciesList[i] << endl;
-	}
-	scMgr.dumpAllInferredClusters_ScerwiseGrouped(outputDir,speciesList);
-	scMgr.dumpAllInferredClusters_LCA(outputDir,speciesList,sdMgr.getRoot()->name);
-	scMgr.showClusters_Ancestral(outputDir);
-	scMgr.dumpAllInferredClusterGammas(outputDir,speciesList);
-	sdMgr.showInferredConditionals(outputDir);
-	sdMgr.showInferredConditionals_ML(outputDir);
+	else if(predictionInputMode==true)
+        {       
+                cout << "Initializing prediction mode" << endl;
+                scMgr.setPredictionInputMode(true);
+                scMgr.setMergedOGIDSet(mergedOgidSet);
+		setTransitionMatrices();
+		vector<string> speciesList;
+                sdMgr.getSpeciesListPrefix(speciesList);
+                for(int i=0;i<speciesList.size();i++)
+                {
+                        cout << speciesList[i] << endl;
+                }
+		scMgr.executePredictionMode(outputDir,speciesList);
+        }
 	return 0;
+}
+
+int
+Framework::readTransitionMatrices(const char* cFile)
+{
+	//SK: first read in fourth column of configuration file for prediction mode. 
+	ifstream inFile(cFile);
+        char buffer[1024];
+        while(inFile.good())
+        {
+                inFile.getline(buffer,1023);
+                if(strlen(buffer)<=0)
+                {
+                        continue;
+                }
+                char* tok=strtok(buffer,"\t");
+                int tokCnt=0;
+                string speciesName;
+                string transitionFName;
+                while(tok!=NULL)
+                {
+                        if(tokCnt==0)
+                        {
+                                speciesName.append(tok);
+                        }
+                        else if(tokCnt==3)
+                        {
+                                transitionFName.append(tok);
+                        }
+                        tok=strtok(NULL,"\t");
+                        tokCnt++;
+                }
+		//SK: for species speciesName, read in the transitionMatrix
+		Matrix* toAdd = new Matrix(maxClusterCnt,maxClusterCnt);
+		cout << speciesName << "\t" << transitionFName << endl;
+		ifstream inFile2(transitionFName.c_str());
+		int r=0;
+		char buffer2[1024];
+		while(inFile2.good())
+		{
+			inFile2.getline(buffer2,1023);
+			if(strlen(buffer2)<=0)
+			{
+				continue;
+			}
+			char* tok2=strtok(buffer2," ");
+			int c=0;
+			while(tok2!=NULL)
+			{
+				double v=atof(tok2);
+				toAdd->setValue(v,r,c);
+				tok2=strtok(NULL," ");
+				c++;
+			}
+			r++;
+		}
+		cout << "Input transition matrix for " << speciesName << endl;
+		toAdd->showMatrix();
+		transitionMatrixMap[speciesName]=toAdd;
+	}	
+	return 0;
+}
+
+int
+Framework::setTransitionMatrices()
+{
+        SpeciesDistManager::Species* root=sdMgr.getRoot();
+	Matrix* forRoot = new Matrix(1,maxClusterCnt);
+	for(int i=0;i<maxClusterCnt;i++)
+	{
+		double v=transitionMatrixMap.find(root->name)->second->getValue(0,i);
+		forRoot->setValue(v,0,i);
+	}
+	root->setParams(forRoot);
+       	setTransitionMatrices(root->leftchild);
+	setTransitionMatrices(root->rightchild);
+        return 0;
+}
+
+int
+Framework::setTransitionMatrices(SpeciesDistManager::Species* anode)
+{
+	if(transitionMatrixMap.find(anode->name)!=transitionMatrixMap.end())
+	{
+		anode->setParams(transitionMatrixMap.find(anode->name)->second);
+	}
+        if(anode->leftchild!=NULL)
+        {
+        	setTransitionMatrices(anode->leftchild);
+        }
+        if(anode->rightchild!=NULL)
+        {      
+                setTransitionMatrices(anode->rightchild);
+        }
+        return 0;
 }
 
 //SK: function for cross validation proceedure
@@ -1116,7 +1229,7 @@ void print_usage()
 		<<"This is free software, and you are welcome to redistribute it"
 		<<" under certain conditions;" <<endl << endl;
 	//SK: print example usage infromation
-	cout <<"Usage: ./arboretum -s specorder -e orthogroup -k maxk -t speciestree -c clusterassignments -r rand -o outputDir -m mode -b baseSpecies -i inittype -p p_diagonal_nonleaf" << endl;
+	cout <<"Usage: ./arboretum -s specorder -e orthogroup -k maxk -t speciestree -c clusterassignments -r rand -o outputDir -m learn -b baseSpecies -i inittype -p p_diagonal_nonleaf" << endl;
 	cout << "Required options:" << endl;
 	//SK: print information on the required variables that are needed as input for running a command. 
 	cout << "-s\t\tFile listing species in the orthology." << endl;
@@ -1124,10 +1237,11 @@ void print_usage()
 	cout << "-k\t\tNumber of clusters in each species." <<  endl;
 	cout << "-t\t\tSpecies tree file of species which are represented by the input data in the analysis" << endl;
 	cout << "-c\t\tThe input cluster assgnment and expression data for each species in the analysis." << endl;
-	cout << "This file of the form: species <tab> cluster_assign_file <tab> expression_data_file" << endl;
+	cout << "This file of the form: species <tab> cluster_assign_file <tab> expression_data_file <endl>" << endl;
 	cout << "-r\t\tOption to randomize input cluster assignments rseed|none|yes." << endl;
 	cout << "-o\t\tOutput directory." << endl;
-	cout << "-m\t\tDefines the mode in which the algorithm is to be used; learn|generate|visualize|crossvalidate|predict are the options." << endl;
+	cout << "-m\t\tDefines the mode in which the algorithm is to be used; learn|generate|visualize|crossvalidation|prediction are the options." << endl;
+	cout << "When in prediction mode the format of the configuration file (pointed to with the -c option) should be : species <tab> cluster_assign_file <tab> expression_data_file <tab> transition_matrix_file <end>" << endl;
 	cout << "-b\t\tA well annotated species to which gene names of other species will be mapped in the *_clusterassign.txt output." << endl;
 	cout << "-i\t\tInitialization method for transition probabilties for cluster membership across species, uniform|branchlength." << endl;
 	cout << "-p\t\tInitial transition probability values, either a single value or a file defining values every specie tree branch." << endl;
@@ -1142,9 +1256,10 @@ void print_usage()
 	cout << "-w\t\tA true|false option to overwrite the output directory if it already exists, the default is false." << endl;
 	cout << "-l\t\tA true|false option to run the last EM optimization step in SpeciesClusterManager::dumpAllInferredClusterAssignments(). Default is True." << endl;
 	cout << "-f\t\tA true|false option to run the merged clustering of the data to generate input clusterassignments. Default is False." << endl;
+	cout << " When this option is used the input configuration (-c) file should be in the form: species <tab> expression_data_file <endl>" << endl;
 	cout << "-u\t\tA true|false option for updating the cluster means from the source species." << endl;
-	cout << " When this option is used the input configuration (-c) file should be in the form: species <tab> expression_data_file" << endl;
 	cout << "-h,--help\t\tReports this usage information." << endl;
+	cout << "A note on prediction mode: generally used when you have an arboretum clustering result to which you have applied a reordering, and hence need to reinfer ancestral assignments for " << endl;
 	return;
 }
 
@@ -1176,6 +1291,10 @@ Framework::readExpressionData(const char* aFName,const char* bFName)
                 }
                 char* tok=strtok(buffer,"\t");
                 int tokCnt=0;
+		if(strncmp(buffer,"Anc",3)==0)
+                {
+                        continue;
+                }
                 string specName;
                 string fileName;
                 while(tok!=NULL)
@@ -1228,8 +1347,8 @@ Framework::readExpressionData(const char* aFName,const char* bFName)
 			dataCnts[specName]=data.size();
 		}
                 MAPS[specName]=gexp;
-		cout << specName << "\t" << gexp.size() << endl;
-		cout << gexp.begin()->second.size() << endl;
+		//cout << specName << "\t" << gexp.size() << endl;
+		//cout << gexp.begin()->second.size() << endl;
 		inFileS.close();
         }
         inFile.close();
@@ -1322,8 +1441,8 @@ Framework::readExpressionData(const char* aFName,const char* bFName)
 						if(MAPS.find(sIter->first)->second.find(oIter->first)!=MAPS.find(sIter->first)->second.end())
 						{
                                                 	vector <string> exprVect=MAPS.find(sIter->first)->second.find(oIter->first)->second;
-                                                	if(exprVect.size()>1)
-                                               	 	{
+							if(exprVect.size()>=1)
+							{
                                                         	//cout << oIter->first << " has expression data." << endl;
                                                         	hasExpression=true;
                                                         	speciesWithGeneExpr++;
@@ -1384,7 +1503,7 @@ Framework::readExpressionData(const char* aFName,const char* bFName)
 					}
                                 }
                         }
-                        if(speciesExpr.size()>1)
+                        if(speciesExpr.size()>=1)
                         {
 				//SK: add values to vector if data is found
                                 for(int i=0;i<speciesExpr.size();i++)
@@ -1493,6 +1612,10 @@ Framework::readExpressionDataNonSrc(const char* aFName,const char* bFName)
                 {
                         continue;
                 }
+		if(strncmp(buffer,"Anc",3)==0)
+                {
+                        continue;
+                }
                 char* tok=strtok(buffer,"\t");
                 int tokCnt=0;
                 string specName;
@@ -1583,8 +1706,8 @@ Framework::readExpressionDataNonSrc(const char* aFName,const char* bFName)
 	//SK: define the number of species of interest
        	int NSpc=specOrder.size();
         int minSpcCnt=2;
-	//SK: obatin orthogroup set
-	map<int,MappedOrthogroup*>& ogSet=mor.getMappedOrthogroups(); //obtain orthogroup informatio
+	//SK: obtain orthogroup set
+	map<int,MappedOrthogroup*>& ogSet=mor.getMappedOrthogroups();
 	//SK: get set of species names and ids for the orthogy information in the mor object
 	map<int,string> allSpeciesIDs = mor.getSpeciesIDNameMap();
 	//SK: define a map object that contains the same information as allSpeciesIDs from mor, but with reversed mappings, i.e., species name to orthology id, and not the reverse
@@ -1604,8 +1727,9 @@ Framework::readExpressionDataNonSrc(const char* aFName,const char* bFName)
 	int NAllSpecies=0; //set number of annotated species in orthology
 	NAllSpecies=mor.getNAllSpecies();
 	//SK: loop over all orthogroups 
-	for(map<int,MappedOrthogroup*>::iterator oIter=ogSet.begin();oIter!=ogSet.end();oIter++) //loop over the orthogroups in the input orthology information
+	for(map<int,MappedOrthogroup*>::iterator oIter=ogSet.begin();oIter!=ogSet.end();oIter++)
 	{
+		//cout << "Checking Orthogroup " << oIter->first << endl;
 		//SK: get orthogroup information
                 MappedOrthogroup* grp = oIter->second;
 		//leave orthogroup if there are fewer than two members
@@ -1666,7 +1790,7 @@ Framework::readExpressionDataNonSrc(const char* aFName,const char* bFName)
 			//SK: as genes tend to become sparser with increasing duplication level, the lower duplication levels with a sufficient number of genes are defined in the output and potentially have their own cluster assignment.	
                        if(cov<minSpcCnt)
 			{
-				break;
+				continue;
 			}
 			//SK: vector object to hold the merged data information
 			vector <string> entries;
@@ -1741,6 +1865,7 @@ Framework::readExpressionDataNonSrc(const char* aFName,const char* bFName)
 			oFile << endl;
 		}//SK: endloop for this duplication level 
 	}//SK: end loop for this orthogroup
+	cout << "Exiting non-source species merging function." << endl;
 }//SK: finished with function
 
 int
@@ -2062,7 +2187,7 @@ Framework::learnMoE(const char* prefix,const char* clusteringOutputDir,int k)
 int
 Framework::genSpeciesClusters(const char* aFName,const char* outDir)
 {
-	//SK: readin initial assignments
+	//SK: read in initial assignments
 	ifstream inFile(aFName);
         char buffer[1024];
         while(inFile.good())
@@ -2106,7 +2231,7 @@ Framework::genSpeciesClusters(const char* aFName,const char* outDir)
                         filePtr[specName]=oFile;
                 }
         }
-	 for(map<string,int>::iterator gIter=geneClusterAssignment.begin();gIter!=geneClusterAssignment.end();gIter++)
+	for(map<string,int>::iterator gIter=geneClusterAssignment.begin();gIter!=geneClusterAssignment.end();gIter++)
         {
                 MappedOrthogroup* mgrp=mor.getMappedOrthogroup(gIter->first.c_str(),srcSpecies);
                 if(mgrp==NULL)
@@ -2131,7 +2256,10 @@ Framework::genSpeciesClusters(const char* aFName,const char* outDir)
                         map<string,map<string,STRINTMAP*>*>& specGenes=spechit->getGeneSet();
                         for(map<string,map<string,STRINTMAP*>*>::iterator hIter=specGenes.begin();hIter!=specGenes.end();hIter++)
                         {
-                                (*file)<< hIter->first<<"\t" << gIter->second << endl;;
+				if(hIter->first!="NULL")
+				{
+                                	(*file)<< hIter->first<<"\t" << gIter->second << endl;
+				}
                         }
                 }
         }
@@ -2202,57 +2330,61 @@ Framework::genSpeciesClustersNonSrc(const char* aFName,const char* outDir)
                         //cout << "To few members: Leaving ortho group" << grp->getID() << endl;
                         continue;
                 }
-		//SK: define the test id for teh first duplication level 
-		char testid[50];
-                int n = sprintf(testid,"OG%i_0",grp->getID());
-		//SK: check if that first duplication level is represented in the cluster assignments from the merged data. 
-		//SK: saves time searching information on an orthogroup that may not have any relevant entries in the merged data. 
-		if(geneClusterAssignment.find(testid)==geneClusterAssignment.end())
-		{
-			continue;
-		}
-		//SK: for future functionality, check if this orthogroup in in a set of orthogroups to be excluded from the analysis
-		//SK: subject to a seaparate function for reading in a list of excluded orthogroups
-		//SK: curently excludedOGList is a map that is not filled and hence thus continue is never called here at this time. 
-               if((excludedOGList.size()>0) && (excludedOGList.find(grp->getID())!=excludedOGList.end()))
-		{
-                        excludeID++;
-                        continue;
-                }
                 map<string,GeneMap*>& Members=grp->getOrthoMembers();
 		//SK: get gene set information 
                 map<int,map<string,string>*>& GS=grp->getGeneSets();
-		//SK:Set variable to hold last used cluster assignment for this orthogroup. 
-		//SK: set it to -1 so that I can identify if any cluster assignments have been set for this orthogroup on any duplication level 
 		int lastCA=-1;
+		int DL_total=GS.size();
+		bool first=true;
+		int DL_first=-1;
+		//SK: if there are more than one partition levels to the gene tree check if the first level with a cluster assignment is not the first _0 level
+		if(DL_total>1)
+		{
+			for(int d=1;d<DL_total;d++)
+			{
+				char groupid[50];
+				sprintf(groupid,"OG%i_%i",grp->getID(),d);
+				if(first && geneClusterAssignment.find(groupid)!=geneClusterAssignment.end() && d!=0)
+				{
+					first=false;
+					DL_first=d;
+					break;
+				}
+			}
+		}
 		//SK: loop over gene set information for each duplication level of the orthogroup
                 for(map<int,map<string,string>*>::iterator gsIter=GS.begin();gsIter!=GS.end();gsIter++)
 		{
 			//SK: define orthogroup level  
                         int DL=gsIter->first;
+			//SK: if this orthogroup level is not the first level of this orthogroup represented and there are more than one level to this orthogroup: 
+			//SK: this acts to provide a cluster assignment to genes on duplication levels that may be below the first duplication level to be given a cluster assignment from the merged data.
+			if(DL_total>1 && DL<DL_first && DL_first!=-1)
+			{
+				DL=DL_first;
+			}
 			//SK: define the group id name  as it would appear in the merged clustering output, which will be in the form of  OG<ogid>_<duplication level>
                         char groupid[50];
                         int n = sprintf(groupid,"OG%i_%i",grp->getID(),DL);
                         map<string,string>* SET=gsIter->second;
-                        //SK: loop over the gene memevers of this duplication level of this orthogroup
+                        //SK: loop over the gene members of this duplication level of this orthogroup
 			for(map<string,string>::iterator igsIter=SET->begin();igsIter!=SET->end();igsIter++)
 			{
 				//cout << igsIter->first << endl;
 				//SK: check if this gene is from a species of interest in our analysis, continue if it is not
-				if(speciesList.find(igsIter->first)==speciesList.end())
+				if(speciesList.find(igsIter->first)==speciesList.end() && igsIter->second!="NULL")
 				{
 					continue;
 				}
 				//SK: if this is a gene for a species of interest then prepare to write out this information by calling the pointer for the ofstream for the cluster assignment file for this specoes. 
                                 ofstream* file=filePtr.find(igsIter->first)->second;
-				//SK: check if this group/duplication level appears in the clusterassignment  information for the merged data, and write out the initial cluster assignment for this gene in this species. 
+				//SK: check if this group/partition level appears in the clusterassignment information for the merged data, and write out the initial cluster assignment for this gene in this species. 
                                 if(geneClusterAssignment.find(groupid)!=geneClusterAssignment.end())
 				{
                                         (*file) << igsIter->second << "\t" << geneClusterAssignment.find(groupid)->second << endl;
 					lastCA=geneClusterAssignment.find(groupid)->second;
-					//cout << igsIter->second << "\t" << geneClusterAssignment.find(groupid)->second << endl;
                                 }
-				//SK: otherwise if this duplication level isn't in the merged data output and we have a gene in a species of interest here, then give that gene the last cluster assignment from the highest duplication level in this orthogroup that has at least 2 genes with data. The fact that lastCA must not be -1 means that at least one duplication level must have two or more genes for this orthogroups, such that it's otherwise already a useful orthogroup.
+				//SK: otherwise if this duplication level isn't in the merged data output and we have a gene in a species of interest here, then give that gene the last cluster assignment from the highest duplication level in this orthogroup that has a cluster assignment.
 				else if(lastCA!=-1)
 				{
 					(*file) << igsIter->second << "\t" << lastCA;
@@ -2744,10 +2876,15 @@ main(int argc, char *argv[])
 	//SK: do preclustering if requested.
 	if(preClusteringStage)
 	{
+	        cout << "Prep expansion of orthogroup set" << endl;
+                char mergedFileNonSource[1024];
+                sprintf(mergedFileNonSource,"%s/mergedDataNonSource.txt",outputDir);
+                fw.readExpressionDataNonSrc(confFName,mergedFileNonSource);
+                fw.countOGIDSNonSrc(mergedFileNonSource);
 		fw.setPreClustering(true);
 		char mergedFile[1024];
 		sprintf(mergedFile,"%s/mergedData.txt",outputDir);
-		fw.readExpressionDataNonSrc(confFName,mergedFile);
+		fw.readExpressionData(confFName,mergedFile);
 		char outsuffix[1024];
 		sprintf(outsuffix,"%s/mergedData",outputDir);
 		fw.fgconverter(mergedFile,outsuffix,1,1);
@@ -2756,7 +2893,7 @@ main(int argc, char *argv[])
 		fw.learnMoE(outsuffix,clusteringOutputDir,kClusters);
 		char clusterFile[1024];
                 sprintf(clusterFile,"%s/mergedClustering/fold0/clusterassign.txt",outputDir);
-		fw.genSpeciesClustersNonSrc(clusterFile,outputDir);
+		fw.genSpeciesClusters(clusterFile,outputDir);
 	}
 	if(strcmp(mode,"prediction")==0)
 	{
@@ -2764,12 +2901,13 @@ main(int argc, char *argv[])
 	}
 	if(predictionInputMode)
 	{
-		cout << "Entering prediction mode" << endl;
+		cout << "Prepare prediction mode" << endl;
 		fw.setPredictionInputMode(true);
 		char mergedFile[1024];
-		sprintf(mergedFile,"%s/mergedData.txt",outputDir);
+		sprintf(mergedFile,"%s/mergedDataAll.txt",outputDir);
 		fw.readExpressionDataNonSrc(confFName,mergedFile);
 		fw.countOGIDSNonSrc(mergedFile);
+		fw.readTransitionMatrices(confFName);
 	}
 	//SK: check that the program is not being run in cross validation mode
 	if(!(strcmp(mode,"crossvalidation")==0))

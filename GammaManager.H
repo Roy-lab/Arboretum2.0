@@ -58,6 +58,10 @@ class GammaManager
 	bool checkIfGammaExists(int);
 	int showTotalUpdatedParents();
 	int sampleAllClusterAssignments(map<int,map<string,int>*>& allClusterAssignments);
+	inline Gamma* getGammaObject(int ogid)
+	{
+		return gammaSet.find(ogid)->second;
+	}
 	private:
 	int updateTransitionMatrix(Gamma::Node*);
 	int updateTransitionMatrix_ML(Gamma::Node*,int);

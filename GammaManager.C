@@ -88,18 +88,18 @@ GammaManager::initGamma(int ogid, string& geneName, string& specName,int clustID
 		gamma->setMaxClusterCnt(maxClusterCnt);
 		gammaSet[ogid]=gamma;
 		GeneTree* gtree=gtMgr.getGeneTree(mor);
-		if(ogid==750)
+		if(ogid==3964 || ogid==4376 || ogid==24943)
                 {
-			//cout << "Init from gene tree: " << ogid << endl;
+			cout << "Init from gene tree: " << ogid << endl;
 		}
 		gamma->initUsingGeneTree(gtree);
 		if(gamma->getDupAncestor().length()>0)
 		{
 			ogDupAncMap[ogid]=gamma->getDupAncestor();
 		}
-		if(ogid==750)
+		if(ogid==3964 || ogid==4376 || ogid==24943)
 		{
-			//cout <<"Now showing " << ogid << endl;
+			cout <<"Now showing " << ogid << endl;
 			gamma->showTree();
 		}
 	}
@@ -154,7 +154,7 @@ GammaManager::estimateLeafGamma(int ogid,map<int,double>& prob,string& geneName,
 		}
 		m->normTerm->setValue(anormTerm,0,r);
 	}
-	if(ogid==5236) //1585|| ogid==2178|| ogid==2894)
+	if(ogid==3964 || ogid==4376) //1585|| ogid==2178|| ogid==2894)
 	{
 		cout << "Leaf gamma: " <<specName <<" " << m->name << endl;
 		m->gamma->showMatrix();
@@ -172,9 +172,10 @@ GammaManager::estimateLeafAlpha(int ogid,map<int,double>& prob,string& geneName,
 	if(m->alpha==NULL)
 	{
 		m->alpha=new Matrix(1,maxClusterCnt);
+		m->alpha->setAllValues(0);
 	}
 	double normTerm=0;
-	if(ogid==3946) //1585|| ogid==2178|| ogid==2894)
+	if(ogid==3964 || ogid==4376 || ogid==24943) //1585|| ogid==2178|| ogid==2894)
     	{
 		cout << "Stop here for OGID 3946" << endl;
 	} 
@@ -208,7 +209,7 @@ GammaManager::estimateNonLeafPosterior()
 	{
 		Gamma* gamma_og=gIter->second;
 		//cout << "GammaManager::estimateNonLeafPosterior " << gIter->first << endl;
-		if(0) //|| gIter->first==25 || gIter->first==29 || gIter->first==26023)
+		if(gIter->first==24943 || gIter->first==3964 || gIter->first==4376) //|| gIter->first==25 || gIter->first==29 || gIter->first==26023)
 		{
 			cout <<"Stop here" << endl;
 			gamma_og->showTree();
@@ -394,10 +395,12 @@ GammaManager::estimateNonLeafPosteriorGamma(Gamma::Node* g,double& ll)
 		if(g->parent==NULL)
 		{
 			g->gamma=new Matrix(1,maxClusterCnt);
+			g->gamma->setAllValues(0);
 		}
 		else
 		{
 			g->gamma=new Matrix(maxClusterCnt,maxClusterCnt);
+			g->gamma->setAllValues(0);
 		}
 	}
 	Matrix* conditional=spdistMgr->getConditional(g->species);
@@ -485,6 +488,7 @@ GammaManager::estimateNonLeafPosteriorBeta(Gamma::Node* g)
 	if(g->beta==NULL)
 	{
 		g->beta=new Matrix(1,maxClusterCnt);
+		g->beta->setAllValues(0);
 	}
 	if(g->parent==NULL)
 	{
@@ -630,6 +634,7 @@ GammaManager::estimateNonLeafPosterior(Gamma::Node* node)
 		if(node->normTerm==NULL)
 		{
 			node->normTerm=new Matrix(1,rowcnt);
+			node->gamma->setAllValues(0);
 		}
 		for(int r=0;r<node->gamma->getRowCnt();r++)
 		{
@@ -2043,7 +2048,6 @@ GammaManager::getLoss(Gamma::Node* n)
 	loss=loss+leftchildloss+rightchildloss;
 	return loss;
 }
-
 
 bool 
 GammaManager::checkIfGammaExists(int ogid)

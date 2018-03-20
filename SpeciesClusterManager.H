@@ -69,6 +69,7 @@ class SpeciesClusterManager
 	int setSouceInitOption(bool);
 	int setPredictionInputMode(bool);
 	int setMergedOGIDSet(map <int,int>& idset);
+	int executePredictionMode(const char* outputDir, vector <string>);
 	private:
 	//SK: boolean class variable to change the mode of the objects functioning if cross validation is being done instead
 	bool CVMode;
@@ -85,7 +86,7 @@ class SpeciesClusterManager
 	//SK: the readClusters function was slightly updated for the cross validation step.
 	int readClusters(string&, const char*);
 	int maximizationStep();
-	int expectationStep();
+	int expectationStep(bool estimate=true);
 	int expectationStep_Species(string& specName, CLUSTERSET* expertSet);
 	//SK: function to mimic the expectation step, but on the test OGIDS set for the cross validation proceedure
 	int expectationStep_Test();
@@ -134,5 +135,6 @@ class SpeciesClusterManager
 	map <int,int> initialOGIDS;
 	int initPredictionOGIDS();
 	int initPredictionGammas();
+	int updateWorkingOGIDs();
 };
 #endif

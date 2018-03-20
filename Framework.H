@@ -74,11 +74,15 @@ class Framework
 		int setPreClustering(bool);
 		int countOGIDSNonSrc(const char* aFName);
 		int setPredictionInputMode(bool);
+		int readTransitionMatrices(const char*);
 	private:
+		map <string,Matrix*> transitionMatrixMap;
 		int learnAncestralClusters();
 		int initClusterTransitionProb();
 		int initClusterTransitionProb(SpeciesDistManager::Species* anode);
 		int initTransitionProb(Matrix* m,double);
+		int setTransitionMatrices();
+		int setTransitionMatrices(SpeciesDistManager::Species* anode);
 		//This is all part of the expectation step
 		int inferAncestralClusters(map<int,map<string,int>*>&);
 		int inferExtantClusters(map<int,map<string,int>*>&);

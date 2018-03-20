@@ -39,6 +39,12 @@ class SpeciesDistManager
 		{
 			return conditional;
 		}
+		inline int setParams(Matrix* in)
+                {
+			conditional_ml=in;
+                        conditional=in;
+			return 0;
+                }
 		map<int,vector<int>*> sortedClustIDs;
 		inline vector<int>* getSortedClusterIDs(int rowID)
 		{
