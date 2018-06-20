@@ -95,7 +95,7 @@ GeneTreeManager::generateTreeFromFile(MappedOrthogroup* mor)
 	GeneTree* tree=readTreeFromFile(treePath);
 	//cout << "Pruning " << ogid  << endl;
 	//showTree(tree);
-	pruneTree(tree);e
+	pruneTree(tree);
 	//cout << "After pruning " << ogid << endl;
 	if(ogid==95 || ogid==3063)
         {
