@@ -8,16 +8,16 @@ The main difference in this update of arboretum is that 1) the command arguments
 
 Required options:
 -s              File listing species in the orthology.
--e              File listing the othology relationships of genes across species.
+-e              File listing the orthology relationships of genes across species.
 -k              Number of clusters in each species.
 -t              Species tree file of species which are represented by the input data in the analysis
--c              The input cluster assgnment and expression data for each species in the analysis.
+-c              The input cluster assignment and expression data for each species in the analysis.
 This file should be of the form: species <tab> cluster_assign_file <tab> expression_data_file
 -r              Option to randomize input cluster assignments rseed|none|yes.
 -o              Output directory.
 -m              Defines the mode in which the algorithm is to be used; learn|generate|visualize|crossvalidate are the options.
 -b              A well annotated species to which gene names of other species will be mapped in the *_clusterassign.txt output.
--i              Initialization method for transition probabilties for cluster membership across species, uniform|branchlength.
+-i              Initialization method for transition probabilities for cluster membership across species, uniform|branchlength.
 -p              Initial transition probability values, either a single value or a file defining values every specie tree branch.
 The init--type setting is for specifying how the diagonal cluster membership transition probabilities across species will be initialized. If inittype is uniform then the -p argument should be the default initial value for diagonal transition probabilities on all branches of the species tree. If the branchlength option is used, then non-uniform transition probabilities will be taken from a file set by the -p option.
 
