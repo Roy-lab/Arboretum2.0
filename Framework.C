@@ -1259,7 +1259,7 @@ void print_usage()
 	cout << " When this option is used the input configuration (-c) file should be in the form: species <tab> expression_data_file <endl>" << endl;
 	cout << "-u\t\tA true|false option for updating the cluster means from the source species." << endl;
 	cout << "-h,--help\t\tReports this usage information." << endl;
-	cout << "A note on prediction mode: generally used when you have an arboretum clustering result to which you have applied a reordering, and hence need to reinfer ancestral assignments for " << endl;
+	cout << "A note on prediction mode: this is most commonly used when you have an arboretum clustering result to which you have applied a reordering, and hence need to reinfer ancestral assignments for the reordered clusters." << endl;
 	return;
 }
 
