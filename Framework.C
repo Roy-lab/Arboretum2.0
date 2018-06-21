@@ -1233,17 +1233,17 @@ void print_usage()
 	cout << "Required options:" << endl;
 	//SK: print information on the required variables that are needed as input for running a command. 
 	cout << "-s\t\tFile listing species in the orthology." << endl;
-	cout << "-e\t\tFile listing the othology relationships of genes across species." << endl;
+	cout << "-e\t\tFile listing the orthology relationships of genes across species." << endl;
 	cout << "-k\t\tNumber of clusters in each species." <<  endl;
 	cout << "-t\t\tSpecies tree file of species which are represented by the input data in the analysis" << endl;
-	cout << "-c\t\tThe input cluster assgnment and expression data for each species in the analysis." << endl;
+	cout << "-c\t\tThe input cluster assignment and expression data for each species in the analysis." << endl;
 	cout << "This file of the form: species <tab> cluster_assign_file <tab> expression_data_file <endl>" << endl;
 	cout << "-r\t\tOption to randomize input cluster assignments rseed|none|yes." << endl;
 	cout << "-o\t\tOutput directory." << endl;
 	cout << "-m\t\tDefines the mode in which the algorithm is to be used; learn|generate|visualize|crossvalidation|prediction are the options." << endl;
 	cout << "When in prediction mode the format of the configuration file (pointed to with the -c option) should be : species <tab> cluster_assign_file <tab> expression_data_file <tab> transition_matrix_file <end>" << endl;
 	cout << "-b\t\tA well annotated species to which gene names of other species will be mapped in the *_clusterassign.txt output." << endl;
-	cout << "-i\t\tInitialization method for transition probabilties for cluster membership across species, uniform|branchlength." << endl;
+	cout << "-i\t\tInitialization method for transition probabilities for cluster membership across species, uniform|branchlength." << endl;
 	cout << "-p\t\tInitial transition probability values, either a single value or a file defining values every specie tree branch." << endl;
 	//SK: print comment on the initialization type and probability value type
 	cout <<"The init--type setting is for specifying how the diagonal cluster membership transition probabilities across species will be initialized. If inittype is uniform then the -p argument should be the default initial value for diagonal transition probabilities on all branches of the species tree. If the branchlength option is used, then non-uniform transition probabilities will be taken from a file set by the -p option." << endl;
