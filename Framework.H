@@ -75,6 +75,7 @@ class Framework
 		int countOGIDSNonSrc(const char* aFName);
 		int setPredictionInputMode(bool);
 		int readTransitionMatrices(const char*);
+		int setSourceInitOption(bool);
 	private:
 		map <string,Matrix*> transitionMatrixMap;
 		int learnAncestralClusters();
@@ -158,5 +159,6 @@ class Framework
 		map<int,int> excludedOGList;
 		map<int,int> mergedOgidSet;
 		bool predictionInputMode;
+		bool sourceInit;
 };
 #endif
