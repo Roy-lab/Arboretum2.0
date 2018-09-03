@@ -66,7 +66,6 @@ class SpeciesClusterManager
 	int writeScores(const char*);
 	//SK: function to set the secondStage boolean variable, see below.
 	int setSecondStageOption(bool);
-	int setSouceInitOption(bool);
 	int setPredictionInputMode(bool);
 	int setMergedOGIDSet(map <int,int>& idset);
 	int executePredictionMode(const char* outputDir, vector <string>);
@@ -127,8 +126,6 @@ class SpeciesClusterManager
 	double convThresh;
 	//SK: a boolean to control if the second maximization phase should be done in SpeciesClusterManager::dumpAllInferredClusterAssignments() 
 	bool secondStage;
-	//SK: a boolean to control if the cluster means should be initialized from the source species. 
-	bool sourceInit;
 	bool predictionInputMode;
 	map <int,int> mergedOGIDS;
 	map <int,int> predictionOGIDS;
