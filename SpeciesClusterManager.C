@@ -223,7 +223,7 @@ SpeciesClusterManager::readSpeciesData(const char* clusterFName,const char* Dir)
 }
 
 int
-SpeciesClusterManager::initExperts(bool)
+SpeciesClusterManager::initExperts(bool sourceInit)
 {
 	for(map<string,CLUSTERSET*>::iterator aIter=speciesExpertSet.begin();aIter!=speciesExpertSet.end();aIter++)
         {
