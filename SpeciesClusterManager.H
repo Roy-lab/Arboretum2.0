@@ -28,7 +28,7 @@ class SpeciesClusterManager
 	int setSrcSpecies(const char*);
 	int readSpeciesData(const char*);
 	 int readSpeciesData(const char*,const char*);
-	int initExperts();
+	int initExperts(bool);
 	int getExtantClusterAssignment(map<int,map<string,int>*>&);
 	int getExtantClusterAssignment(map<int,map<string,int>*>&,map<string,int>&);
 	map<string,CLUSTERSET*>& getExtantSpeciesClusters();
