@@ -75,10 +75,18 @@ Framework::Framework()
 	epsThreshold=-1;
         untransformedData[0]='\0';
 	predictionInputMode=false;
+	sourceInit=false;
 }
 
 Framework::~Framework()
 {
+}
+
+int
+Framework::setSourceInitOption(bool in)
+{
+	sourceInit=in;
+	return 0;
 }
 
 int 
@@ -163,7 +171,7 @@ Framework::startClustering(const char* aDir)
 	//SK: set the second stage parameter
         scMgr.setSecondStageOption(secondStage);
 	strcpy(outputDir,aDir);
-	scMgr.initExperts();
+	scMgr.initExperts(sourceInit);
 	cout <<"Total updated parent nodes "<< gammaMgr.getTotalUpdatedParentCnt() << endl;
         gammaMgr.showTotalUpdatedParents();
 	if(predictionInputMode==false)
@@ -269,7 +277,7 @@ Framework::readTransitionMatrices(const char* cFile)
 				double v=atof(tok2);
 				toAdd->setValue(v,r,c);
 				tok2=strtok(NULL," ");
-				c++;
+					c++;
 			}
 			r++;
 		}
@@ -448,7 +456,7 @@ Framework::startCrossValidationCheck(const char* aDir,int cvF,const char* rand,c
 		//SK: the following follows what is done in Framework::startClustering(const char* aDir)
 
 		//SK: initialize expert parameters
-                scMgrTrn.initExperts();
+                scMgrTrn.initExperts(sourceInit);
 		//SK: needs to be done from Framework::startClustering(const char* aDir)
 		gammaMgrTrn.showTotalUpdatedParents();
 		//SK: initialize the SpeciesDistManager
@@ -515,7 +523,7 @@ Framework::startCrossValidationCheck(const char* aDir,int cvF,const char* rand,c
 int
 Framework::generateData(const char* outputDir)
 {
-	scMgr.initExperts();
+	scMgr.initExperts(sourceInit);
 	//Lets do one round of learning shall we.
 	initClusterTransitionProb();
 	scMgr.estimateExpertParameters(outputDir);
@@ -645,7 +653,7 @@ Framework::generateData(const char* outputDir)
 int
 Framework::redisplay(const char* outputDir)
 {
-	scMgr.initExperts();
+	scMgr.initExperts(sourceInit);
 	scMgr.showClusters(outputDir);
 	//Only redisplay the data
 	return 0;
@@ -2873,6 +2881,8 @@ main(int argc, char *argv[])
 	fw.readOrthology(speciesOrderFName,OGIDSFName);
 	//SK: seIt the source species name
         fw.setSrcSpecies(sourceSpecies);
+	//SK: set option for initializing cluster means from the source species. 
+	fw.setSourceInitOption(sourceInit);
 	//SK: do preclustering if requested.
 	if(preClusteringStage)
 	{
