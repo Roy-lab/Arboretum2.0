@@ -223,7 +223,7 @@ SpeciesClusterManager::readSpeciesData(const char* clusterFName,const char* Dir)
 }
 
 int
-SpeciesClusterManager::initExperts()
+SpeciesClusterManager::initExperts(bool)
 {
 	for(map<string,CLUSTERSET*>::iterator aIter=speciesExpertSet.begin();aIter!=speciesExpertSet.end();aIter++)
         {
@@ -2939,13 +2939,6 @@ SpeciesClusterManager::setSecondStageOption(bool in)
 {
         secondStage=in;
         return 0;
-}
-
-int
-SpeciesClusterManager::setSouceInitOption(bool in)
-{
-	sourceInit=in;
-	return 0;
 }
 
 int
