@@ -27,7 +27,7 @@ class SpeciesClusterManager
 	int setGammaManager_Test(GammaManager*);
 	int setSrcSpecies(const char*);
 	int readSpeciesData(const char*);
-	 int readSpeciesData(const char*,const char*);
+	int readSpeciesData(const char*,const char*);
 	int initExperts(bool);
 	int getExtantClusterAssignment(map<int,map<string,int>*>&);
 	int getExtantClusterAssignment(map<int,map<string,int>*>&,map<string,int>&);
@@ -44,7 +44,7 @@ class SpeciesClusterManager
 	int dumpAllInferredClusterAssignments(const char* outputDir,int);
 	int dumpAllInferredClusters_Scerwise(const char* outputDir,vector<string>& speciesList);
 	int dumpAllInferredClusters_ScerwiseGrouped(const char* outputDir,vector<string>& speciesList);
-	int dumpAllInferredClusters_LCA(const char* outputDir,vector<string>& speciesList, string& lcaName);
+	int dumpAllInferredClusters_LCA(const char* outputDir,vector<string>& speciesList, string& lcaName, const char* treefile);	// repop
 	int dumpAllInferredClusterGammas(const char* outputDir,vector<string>& speciesList);
 	//int dumpAllInferredClusters_Scerwise_Dup(const char* outputDir,vector<string>& speciesList);
 	map<string,int>* getGenesForSpecies(string&);
@@ -52,6 +52,7 @@ class SpeciesClusterManager
 	int setRandSeed(int);
 	int setMaxClusterCnt(int);
 	int generateData(const char*,string&,vector<string>&);
+        int setConstCov(double val); // FIXED COVARIANCE; Sets constant cov value (DC Add)
 	//SK: set the number of iteractions to allow in the learning function if the algorithm doesn't converge
 	int setNMaxIterations(int n);
 	//SK: set the conversion threshold for the learning proceedure, the algorithm has convererged if the likelihood score changes by less than this amount
@@ -68,7 +69,7 @@ class SpeciesClusterManager
 	int setSecondStageOption(bool);
 	int setPredictionInputMode(bool);
 	int setMergedOGIDSet(map <int,int>& idset);
-	int executePredictionMode(const char* outputDir, vector <string>);
+	int executePredictionMode(const char* outputDir, vector <string>, const char* treeFName);	// repop
 	private:
 	//SK: boolean class variable to change the mode of the objects functioning if cross validation is being done instead
 	bool CVMode;
@@ -120,12 +121,19 @@ class SpeciesClusterManager
 	int rseed;
 	map<int,int> initRandAssign;
 	//SK: maximum number of iterations to allow before ending the learning step regardless if the likelihood score has converged to the desired threshold level
+
+        // FIXED COVARIANCE START //
+        double constCov; // Fixed value for covariance (DC)
+        bool fixCov; // If true, uses fixed value (DC)
+        // FIXED COVARIANCE END //
+
 	int nMaxIterations;
 	//SK: threshold for the change in the likelihood score to meet the convergence condition.
 	//SK: In order to converge the change in the score between iterations in the learning algorithm should be less than this value.
 	double convThresh;
 	//SK: a boolean to control if the second maximization phase should be done in SpeciesClusterManager::dumpAllInferredClusterAssignments() 
 	bool secondStage;
+	//SK: a boolean to control if the cluster means should be initialized from the source species. 
 	bool predictionInputMode;
 	map <int,int> mergedOGIDS;
 	map <int,int> predictionOGIDS;
@@ -133,5 +141,7 @@ class SpeciesClusterManager
 	int initPredictionOGIDS();
 	int initPredictionGammas();
 	int updateWorkingOGIDs();
+	map <string,string> readSpeciesTree(const char*);	// repop
+	map <string,string> children;	// repop
 };
 #endif
