@@ -1,4 +1,4 @@
-The arboretum_v2.tgz archive includes one directory, named Arboretum, with the C++ code for the updated version of the Arboretum program.
+The .zip archive dowloadable from this repository includes one directory, named Arboretum, with the C++ code for the updated version of the Arboretum program.
 
 To compile the executable, type "make" in the arboretum directory. The executable will be named arboretum. The code should take not more than 1 minute to compile in my experience.
 
@@ -51,7 +51,7 @@ The "-f true" argument option is the new option that will allow you to tell the 
 
         3. In the Arboretum output directory the initial clusterassignments for each species will appear with the name <species>_initial_clusterassign.txt.
 
-Note that if you use "-1 true", the -c input file should be of the form "species\texpression data file\n", instead of "species\tinput clusterassignment file\texpression data file\n" with "-1 false" (default). In short there will only two columns with with the species names and expression data files, none for cluster assignment file. A typical usage in a case of running the mereged clustering within Arboretum is as follows:
+Note that if you use "-f true", the -c input file should be of the form "species\texpression data file\n", instead of "species\tinput clusterassignment file\texpression data file\n" with "-1 false" (default). In short there will only two columns with with the species names and expression data files, none for cluster assignment file. A typical usage in a case of running the mereged clustering within Arboretum is as follows:
 
 ./arboretum -s ${SPECIESORDER} -e ${OGIDS} -k ${k} -t ${TREE} -c ${CONF} -r none -o ${DIR} -m learn -b ${BSPECIES} -i uniform -p 0.80 -g ${GENETREES} -n 100 -f true -w true
 
@@ -60,3 +60,19 @@ To use the example files from the Arboretum Website at http://pages.discovery.wi
 ./arboretum -s specorder_allclade.txt -e OGid_members.txt -k 5 -t species_prob_heat8spec.txt -c cluster_conf.txt - r none -o result_dir -m learn -b Scer -i uniform -p 0.8 -g data/TREES -n 100 -f false -w true
 
 This will create the output directory result_dir is it already exists, or otherwise write over it with the -w true option. Details of the file formats can also be studied from these examples.
+
+==============================================================================================================================
+
+A note about GSL installation adn compilation of Arboretum:
+
+the GSL library is a dependency of Arboretum. In some UNIX systems it will be readilly available for compilation in the lib and include directory of this repository for a working version of this code. However in general, that may not automatically work on all platfoms and you can install the GSL library in a given system (tested in OS X) with the following steps:
+
+wget http://mirror.clarkson.edu/gnu/gsl/gsl-latest.tar.gz
+tar xvfz gsl-latest.tar.gz 
+cd gsl-2.6/
+./configure 
+make
+make install
+
+This will place an installation of the GSL library at the /usr/local/lib and /use/local/include, respectively (again, tested in OS X). This means that if you're not using the provided GSL lib and include files, you may need to update LIBPATH and INCPATH1 in the Makefile for the compilation to work. 
+
