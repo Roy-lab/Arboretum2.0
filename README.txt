@@ -74,5 +74,5 @@ cd gsl-2.6/
 make
 make install
 
-This will place an installation of the GSL library at the /usr/local/lib and /use/local/include, respectively (again, tested in OS X). This means that if you're not using the provided GSL lib and include files, you may need to update LIBPATH and INCPATH1 in the Makefile for the compilation to work. 
+This will place an installation of the GSL library at the /usr/local/lib and /use/local/include, respectively (again, tested in OS X). This means that if you're not using the provided GSL lib and include files, you may need to update LIBPATH and INCLPATH1 in the Makefile for the compilation to work. 
 
