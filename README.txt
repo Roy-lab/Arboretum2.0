@@ -63,7 +63,7 @@ This will create the output directory result_dir is it already exists, or otherw
 
 ==============================================================================================================================
 
-A note about GSL installation adn compilation of Arboretum:
+A note about GSL installation and compilation of Arboretum:
 
 the GSL library is a dependency of Arboretum. In some UNIX systems it will be readilly available for compilation in the lib and include directory of this repository for a working version of this code. However in general, that may not automatically work on all platfoms and you can install the GSL library in a given system (tested in OS X) with the following steps:
 
