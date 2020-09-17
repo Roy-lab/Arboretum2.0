@@ -9,5 +9,5 @@ CC=g++
 CFLAGS = -g
 
 condSpecLearner: $(SRC)
-	$(CC) $(SRC) -I $(INCLPATH1) -I $(INCLPATH2)  -L $(LIBPATH) $(LFLAG) $(CFLAGS) -o arboretum_proteome
+	$(CC) $(SRC) -I $(INCLPATH1) -I $(INCLPATH2)  -L $(LIBPATH) $(LFLAG) $(CFLAGS) -o arboretum_plants
 
