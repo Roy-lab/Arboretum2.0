@@ -180,10 +180,6 @@ Framework::startClustering(const char* aDir)
 		scMgr.setMergedOGIDSet(mergedOgidSet);
 		vector<string> speciesList;
 		sdMgr.getSpeciesListPrefix(speciesList);
-		//SK: initialize cluster assignments for genes in orthogroups that can be added from the non-source species merged data in prediction mode
-		scMgr.setPredictionInputMode(true);
-		scMgr.executePredictionMode(outputDir,speciesList);
-		scMgr.setPredictionInputMode(false);
 		//SK:at this point the cluster assingments should be initialized for all genes in orthogrous that can be used.
 		//SK:these clusters assingments will be in the prediction subdirectory of the output directory.  
 		scMgr.estimateExpertParameters(outputDir);
