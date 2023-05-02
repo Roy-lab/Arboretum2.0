@@ -32,6 +32,7 @@ The following are non-required options.
 -f		A true|false option to run the merged clustering of the data to generate input clusterassignments. Default is False.
  When this option is used the input configuration (-c) file should be in the form: species <tab> expression_data_file <endl>
 -u		A true|false option for updating the cluster means from the source species. Note this should only be attempted if the species all have the same number of data points. Otherwise it is not stringently requred that all species do have the same number of data points per gene, but all genes represented within each species must of course have the same number of data points. 
+-x              Fixed covariance value (a positive real number). Go through the computation with fixed covariance of designated number if given.
 -h,--help		Reports this usage information.
 A note on prediction mode: this is most commonly used when you have an arboretum clustering result to which you have applied a reordering, and hence need to re-infer assignments for ancestral assignments, or convesely when you want to include additional ortho-groups in your analysis and infer the cluster assignments for new genes based on the existing model.
 
