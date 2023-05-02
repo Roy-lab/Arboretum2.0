@@ -702,10 +702,12 @@ GeneTreeManager::insertTree(GeneTree* node)
 		if(leftspecies==1)
                 {
                         newparent->leftchild=node;
+			node->parent = newparent;	//JI mod
                 }
                 else if(rightspecies==1)
                 {
                         newparent->rightchild=node;
+			node->parent = newparent;	//JI mod
                 }
 		int parentlevel=sdMgr->getLevelFromRoot(parent->species.c_str());
 		int newparentlevel=sdMgr->getLevelFromRoot(newparent->species.c_str());

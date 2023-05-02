@@ -124,13 +124,13 @@ Expert::getOutputPDF(vector<double>* y)
 	}
 	//pdf=(-0.5*sum)-normFactor;
 	//pdf=exp(pdf);
-	if(pdf<1e-80)
+	if(pdf<1e-300)
 	{
 		if(pdf<minpdf)
 		{	
 			minpdf=pdf;
 		}
-		pdf=1e-80;
+		pdf=1e-300;
 		clipCnt++;
 	}
 	delete p1;

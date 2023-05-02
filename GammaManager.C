@@ -15,10 +15,10 @@ Arboretum: An algorithm to cluster functional genomesomics data from multiple sp
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
- #include <unistd.h>
 #include <iostream>
 #include <math.h>
 #include <string.h>
+#include <unistd.h>	//
 #include <fstream>
 #include <gsl/gsl_randist.h>
 #include "SpeciesDistManager.H"
@@ -210,7 +210,7 @@ GammaManager::estimateNonLeafPosterior()
 	{
 		Gamma* gamma_og=gIter->second;
 		//cout << "GammaManager::estimateNonLeafPosterior " << gIter->first << endl;
-		if(gIter->first==24943 || gIter->first==3964 || gIter->first==4376) //|| gIter->first==25 || gIter->first==29 || gIter->first==26023)
+		if(gIter->first==15934) //|| gIter->first==25 || gIter->first==29 || gIter->first==26023)
 		{
 			cout <<"Stop here" << endl;
 			gamma_og->showTree();
@@ -319,22 +319,38 @@ GammaManager::estimateNonLeafPosteriorAlpha(Gamma::Node* node)
 		}
 		if(node->leftchild!=NULL && node->leftchild->alpha!=NULL && node->rightchild!=NULL && node->rightchild->alpha!=NULL)
 		{
-			node->alpha->setValue(leftval*rightval,0,r);
-			sum=sum+(leftval*rightval);
-			if(leftval*rightval<0)
+			//SR made this change for clipping
+			double myval=leftval*rightval;
+			//if(myval<1e-100)
+			if(myval<1e-300)
 			{
-				//cout << "alpha " << node->name << "\t" << node->leftchild->name << "\t" << leftval << "\t" << node->rightchild->name << "\t" << rightval << endl;
+				myval=1e-300;
+				//myval=1e-100;
 			}
+			//node->alpha->setValue(leftval*rightval,0,r);
+			node->alpha->setValue(myval,0,r);
+			//sum=sum+(leftval*rightval);
+			sum=sum+myval;
 		}
 		else 
 		{
 			if(node->leftchild!=NULL && node->leftchild->alpha!=NULL)
 			{
+				//SR: clipping values to avoid hitting 0
+				if(leftval<1e-300)
+				{
+					leftval=1e-300;
+				}
 				node->alpha->setValue(leftval,0,r);
 				sum=sum+leftval;
 			}
 			if(node->rightchild!=NULL && node->rightchild->alpha!=NULL)
 			{
+				//SR: clipping values to avoid hitting 0
+				if(rightval<1e-300)
+				{
+					rightval=1e-300;
+				}
 				node->alpha->setValue(rightval,0,r);
 				sum=sum+rightval;
 			}
@@ -356,7 +372,7 @@ GammaManager::estimateNonLeafPosteriorAlpha(Gamma::Node* node)
 			}
 			if(node->leftchild!=NULL)
                         {
-                                cout << "left child name " << node->rightchild->name << endl;
+                                cout << "left child name " << node->leftchild->name << endl;
                         }
 			exit(0);
 		}
@@ -794,7 +810,8 @@ GammaManager::getAllClusterAssignments(map<int,map<string,int>*>& allClusterAssi
 	{
 		int ogid=gIter->first;
 		Gamma* gamma=gIter->second;
-		if(gIter->first==8612)
+		//cout <<"OGID " << ogid << endl;
+		if(gIter->first==10293)
 		{
 			gamma->showTree();
 		}
@@ -822,7 +839,7 @@ GammaManager::getAllClusterAssignments(map<int,map<string,int>*>& allClusterAssi
 		bool dup=hasDuplicate(gamma->root);
 		if(!dup && revisit)
 		{
-			revisitLeafAssignments(gamma->root, extantCAssign,maximalAssignment);
+		//	revisitLeafAssignments(gamma->root, extantCAssign,maximalAssignment);
 		}
 		allClusterAssignments[gIter->first]=maximalAssignment;
 	}

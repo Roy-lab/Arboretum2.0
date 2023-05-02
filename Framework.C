@@ -162,7 +162,8 @@ Framework::setSrcSpecies(const char* specName)
 }
 
 int 
-Framework::startClustering(const char* aDir)
+//Framework::startClustering(const char* aDir)
+Framework::startClustering(const char* aDir, const char* treeFName)	// repop
 {
 	//SK: set maximum number of iterations to allow
         scMgr.setNMaxIterations(nMaxIterations);
@@ -180,6 +181,10 @@ Framework::startClustering(const char* aDir)
 		scMgr.setMergedOGIDSet(mergedOgidSet);
 		vector<string> speciesList;
 		sdMgr.getSpeciesListPrefix(speciesList);
+		//SK: initialize cluster assignments for genes in orthogroups that can be added from the non-source species merged data in prediction mode
+		//scMgr.setPredictionInputMode(true);
+		//scMgr.executePredictionMode(outputDir,speciesList,treeFName);	// repop
+		//scMgr.setPredictionInputMode(false);
 		//SK:at this point the cluster assingments should be initialized for all genes in orthogrous that can be used.
 		//SK:these clusters assingments will be in the prediction subdirectory of the output directory.  
 		scMgr.estimateExpertParameters(outputDir);
@@ -200,7 +205,8 @@ Framework::startClustering(const char* aDir)
 			cout << speciesList[i] << endl;
 		}
 		scMgr.dumpAllInferredClusters_ScerwiseGrouped(outputDir,speciesList);
-		scMgr.dumpAllInferredClusters_LCA(outputDir,speciesList,sdMgr.getRoot()->name);
+		//scMgr.dumpAllInferredClusters_LCA(outputDir,speciesList,sdMgr.getRoot()->name);
+		scMgr.dumpAllInferredClusters_LCA(outputDir,speciesList,sdMgr.getRoot()->name,treeFName);	// repop
 		scMgr.showClusters_Ancestral(outputDir);
 		scMgr.dumpAllInferredClusterGammas(outputDir,speciesList);
 		sdMgr.showInferredConditionals(outputDir);
@@ -218,7 +224,7 @@ Framework::startClustering(const char* aDir)
                 {
                         cout << speciesList[i] << endl;
                 }
-		scMgr.executePredictionMode(outputDir,speciesList);
+		scMgr.executePredictionMode(outputDir,speciesList,treeFName);	// repop
         }
 	return 0;
 }
@@ -273,7 +279,7 @@ Framework::readTransitionMatrices(const char* cFile)
 				double v=atof(tok2);
 				toAdd->setValue(v,r,c);
 				tok2=strtok(NULL," ");
-					c++;
+				c++;
 			}
 			r++;
 		}
@@ -320,7 +326,8 @@ Framework::setTransitionMatrices(SpeciesDistManager::Species* anode)
 
 //SK: function for cross validation proceedure
 int 
-Framework::startCrossValidationCheck(const char* aDir,int cvF,const char* rand,const char* confFName,const char* specOrder, const char* orthomapfile)
+//Framework::startCrossValidationCheck(const char* aDir,int cvF,const char* rand,const char* confFName,const char* specOrder, const char* orthomapfile)
+Framework::startCrossValidationCheck(const char* aDir,int cvF,const char* rand,const char* confFName,const char* specOrder, const char* orthomapfile, const char* treeFName)	// repop
 {
 	cout << "Starting cross validation check" << endl;//SK: State that the code is starting cross validation
 	r_og=gsl_rng_alloc(gsl_rng_default);//SK: define the random number generator
@@ -504,7 +511,8 @@ Framework::startCrossValidationCheck(const char* aDir,int cvF,const char* rand,c
 			cout << speciesList[i] << endl;
 		}
 		scMgrTrn.dumpAllInferredClusters_ScerwiseGrouped(outDirF,speciesList);
-		scMgrTrn.dumpAllInferredClusters_LCA(outDirF,speciesList,sdMgr.getRoot()->name);
+		//scMgrTrn.dumpAllInferredClusters_LCA(outDirF,speciesList,sdMgr.getRoot()->name);
+		scMgrTrn.dumpAllInferredClusters_LCA(outDirF,speciesList,sdMgr.getRoot()->name,treeFName);	// repop
 		scMgrTrn.showClusters_Ancestral(outDirF);
 		scMgrTrn.dumpAllInferredClusterGammas(outDirF,speciesList);
 		sdMgr.showInferredConditionals(outDirF);
@@ -2405,6 +2413,15 @@ Framework::setPreClustering(bool in)
 	return 0;
 }
 
+// FIXED COVARIANCE START //
+int
+Framework::setConstCov(double val)
+{
+        scMgr.setConstCov(val);
+        return 0;
+}
+// FIXED COVARIANCE END //
+
 int
 Framework::setPredictionInputMode(bool in)
 {	
@@ -2507,6 +2524,8 @@ main(int argc, char *argv[])
 	bool pDefault=false;
 	bool rDefault=false;
         bool bDefault=false;
+	bool xDefault=false;    // FIXED COVARIANCE //
+	double fixedCov=0.2;    // FIXED COVARIANCE //
 	//SK: define argument option
 	static struct option long_options[] = {
 		{"species-order", 	required_argument, 0,  's' },
@@ -2528,6 +2547,7 @@ main(int argc, char *argv[])
 		{"first-clustering",      optional_argument, 0,  'f' },
 		{"last-stage",        optional_argument, 0,  'l' },
 		{"update-source",		optional_argument, 0,  'u' },
+                {"constant covariance", optional_argument, 0,  'x' },   // FIXED COVARIANCE //
 		{"help",		optional_argument, 0,  'h' },
 		{0,0,0,0}
 	};
@@ -2536,7 +2556,7 @@ main(int argc, char *argv[])
         int oldoptind=optind;
         int condCnt=1;
 	int long_index=0;
-	while ((opt=getopt_long(argc,argv,"s:e:k:t:c:r:o:m:b:i:p:g:d:n:v:w:f:l:u:h:",long_options,&long_index)) != -1) 
+	while ((opt=getopt_long(argc,argv,"s:e:k:t:c:r:o:m:b:i:p:g:d:n:v:w:f:l:u:x:h:",long_options,&long_index)) != -1)  // FIXED COVARIANCE; "x"
 	{
 		//cout << long_index << endl;
 		//cout << opt << optret << endl;
@@ -2565,6 +2585,15 @@ main(int argc, char *argv[])
 				cout << "Species list file: " << speciesOrderFName << endl;
 				break;
 			}
+                        // FIXED COVARIANCE START //
+			case 'x':
+                        {
+                                fixedCov = atof(my_optarg);
+                                xDefault = true;
+                                cout << "Fixed covariance is: " << fixedCov << endl;
+                                break;
+                        }
+                        // FIXED COVARIANCE END //
 			case 'e':
 			{
 				eDefault=true;
@@ -2880,6 +2909,12 @@ main(int argc, char *argv[])
 	//SK: set option for initializing cluster means from the source species. 
 	fw.setSourceInitOption(sourceInit);
 	//SK: do preclustering if requested.
+        // FIXED COVARIANCE START //
+        if (xDefault)
+        {
+                fw.setConstCov(fixedCov);
+        }
+        // FIXED COVARIANCE END //
 	if(preClusteringStage)
 	{
 	        cout << "Prep expansion of orthogroup set" << endl;
@@ -2890,16 +2925,18 @@ main(int argc, char *argv[])
 		fw.setPreClustering(true);
 		char mergedFile[1024];
 		sprintf(mergedFile,"%s/mergedData.txt",outputDir);
-		fw.readExpressionData(confFName,mergedFile);
+		//fw.readExpressionData(confFName,mergedFile);	// source spc only, 210819
 		char outsuffix[1024];
 		sprintf(outsuffix,"%s/mergedData",outputDir);
-		fw.fgconverter(mergedFile,outsuffix,1,1);
+		//fw.fgconverter(mergedFile,outsuffix,1,1);	// source spc only, 210819
+		fw.fgconverter(mergedFileNonSource,outsuffix,1,1);
 		char clusteringOutputDir[1024];
 		sprintf(clusteringOutputDir,"%s/mergedClustering",outputDir);
 		fw.learnMoE(outsuffix,clusteringOutputDir,kClusters);
 		char clusterFile[1024];
                 sprintf(clusterFile,"%s/mergedClustering/fold0/clusterassign.txt",outputDir);
-		fw.genSpeciesClusters(clusterFile,outputDir);
+		//fw.genSpeciesClusters(clusterFile,outputDir);	// source spc only, 210819
+		fw.genSpeciesClustersNonSrc(clusterFile,outputDir);
 	}
 	if(strcmp(mode,"prediction")==0)
 	{
@@ -2942,7 +2979,7 @@ main(int argc, char *argv[])
 	if(strcmp(mode,"learn")==0 || strcmp(mode,"prediction")==0)
 	{
 		//SK: apply the learning algorithm to infer the arboretum model and clusters
-		fw.startClustering(outputDir);
+		fw.startClustering(outputDir, treeFName);	// repop
 	}
 	//SK: otherwise, if in crossvalidation mode
 	else if(strcmp(mode,"crossvalidation")==0)
@@ -2955,7 +2992,7 @@ main(int argc, char *argv[])
 			return 0;
 		}
 		//SK: continue to run the cross validation analysis
-		fw.startCrossValidationCheck(outputDir,crossValFold,randOpt,confFName,speciesOrderFName,OGIDSFName);
+		fw.startCrossValidationCheck(outputDir,crossValFold,randOpt,confFName,speciesOrderFName,OGIDSFName,treeFName);	// repop
 	}
 	//SK: otherwise check if generate mode is requested
 	else if(strcmp(mode,"generate")==0)

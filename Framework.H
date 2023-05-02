@@ -52,8 +52,8 @@ class Framework
 		int readSpeciesTree(int,const char*);
 		int readOrthology(const char* specOrder, const char* orthomapfile);
 		int setSrcSpecies(const char*);
-		int startClustering(const char*);
-		int startCrossValidationCheck(const char*, int cvF,const char*,const char*,const char*, const char*);//function for runnign the cross validation study
+		int startClustering(const char*, const char*);	// repop
+		int startCrossValidationCheck(const char*, int cvF,const char*,const char*,const char*, const char*, const char*);//function for runnign the cross validation study, repop
 		int generateData(const char*);
 		int fgconverter(const char*,const char*,int,int);
 		int learnMoE(const char*,const char*,int);
@@ -76,6 +76,7 @@ class Framework
 		int setPredictionInputMode(bool);
 		int readTransitionMatrices(const char*);
 		int setSourceInitOption(bool);
+                int setConstCov(double); // FIXED COVARIANCE //
 	private:
 		map <string,Matrix*> transitionMatrixMap;
 		int learnAncestralClusters();
@@ -159,6 +160,6 @@ class Framework
 		map<int,int> excludedOGList;
 		map<int,int> mergedOgidSet;
 		bool predictionInputMode;
-		bool sourceInit;
+		bool sourceInit;		
 };
 #endif

@@ -16,11 +16,12 @@ Arboretum: An algorithm to cluster functional genomesomics data from multiple sp
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
- #include <unistd.h>
-#include <iostream>
 #include <iostream>
 #include <fstream>
 #include <string.h>
+#include <stdlib.h>	// repop
+#include <cstring>	// repop
+#include <unistd.h>	//
 #include <math.h>
 #include "GeneMap.H"
 #include "MappedOrthogroup.H"
@@ -35,6 +36,7 @@ Arboretum: An algorithm to cluster functional genomesomics data from multiple sp
 #include "GammaManager.H"
 #include "GeneNameMapper.H"
 #include "SpeciesClusterManager.H"
+
 
 SpeciesClusterManager::SpeciesClusterManager()
 {
@@ -80,6 +82,56 @@ SpeciesClusterManager::setGammaManager_Test(GammaManager* aPtr)
         return 0;
 }
 
+// repopulating
+map<string,string>
+SpeciesClusterManager::readSpeciesTree(const char* aFName)
+{
+	map<string,string> children;
+        ifstream inFile(aFName);
+        char buffer[1024];
+        while(inFile.good())
+        {
+                inFile.getline(buffer,1023);
+                if(strlen(buffer)<=0)
+                {
+                        continue;
+                }
+                if(strchr(buffer,'#')!=NULL)
+                {
+                        continue;
+                }
+                char* tok=strtok(buffer,"\t");
+                int tokCnt=0;
+                string childSpeciesName;
+                string parentSpeciesName;
+                string childtype;
+                while(tok!=NULL)
+                {
+                        if(tokCnt==0)
+                        {
+                                childSpeciesName.append(tok);
+                        }
+                        else if(tokCnt==1)
+                        {
+                                childtype.append(tok);
+                        }
+                        else if(tokCnt==2)
+                        {
+                                parentSpeciesName.append(tok);
+                        }
+                        tok=strtok(NULL,"\t");
+                        tokCnt++;
+                }
+		string key=parentSpeciesName;
+		key.append("_");
+		key.append(childtype);
+		children.insert(make_pair(key,childSpeciesName));
+	}
+	inFile.close();
+	return children;
+}
+// repop_end
+
 int
 SpeciesClusterManager::setSrcSpecies(const char* aName)
 {
@@ -107,6 +159,16 @@ SpeciesClusterManager::setRandSeed(int aseed)
 	rseed=aseed;
 	return 0;
 }
+// FIXED COVARIANCE START //
+// Sets constant covariance value and flag that we will use it.
+int
+SpeciesClusterManager::setConstCov(double val)
+{
+        constCov=val;
+        fixCov=true;
+        return 0;
+}
+// FIXED COVARIANCE END //
 
 int 
 SpeciesClusterManager::readSpeciesData(const char* clusterFName)
@@ -240,7 +302,7 @@ SpeciesClusterManager::initExperts(bool sourceInit)
 			{
 				Expert* e=cIter->second;
 				int sample=estimateMeanCov(e,(string&)aIter->first,cIter->first);
-				if(sample<10)
+				if(sample<1)	// neuron MODIFICATION
 				{
 					cout << srcSpecies << " cluster " << cIter->first << " has " << sample << " genes." << endl;
 					cout << "Exiting program in SpeciesClusterManager::initExperts()" << endl;
@@ -522,10 +584,10 @@ SpeciesClusterManager::getScore()
 			}
 			vector<double>* exprProf=speciesMgr->getExp(vIter->first);
 			//SK: set number of data points
-			if(NData==0)
-			{
+			//if(NData==0)
+			//{
 				NData=exprProf->size();
-			}
+			//}
 			map<int,double>* mixOutProbs=gammaMgr->getLeafLikelihood_store(ogid,(string&)vIter->first);
 			for(map<int,Expert*>::iterator eIter=expertSet->begin();eIter!=expertSet->end();eIter++)
 			{
@@ -699,8 +761,19 @@ SpeciesClusterManager::estimateMeanCov(Expert* e, string& specName, int clusterI
 				}
 			}
 			cov=cov/sum;
-			covariance->setValue(cov,i,j);
-			covariance->setValue(cov,j,i);
+                        // FIXED COVARIANCE START //
+			//covariance->setValue(cov,i,j);
+                        //covariance->setValue(cov,j,i);
+
+			if (fixCov)
+                        {
+                                cov=constCov;
+                        }
+                        double cov_post=cov; // fixing covariance
+
+			covariance->setValue(cov_post,i,j);
+                        covariance->setValue(cov_post,j,i);
+                        // FIXED COVARIANCE END //
 		}
 	}
 	cout <<"Mean estimated from "<< totaldp << " in " << specName <<":" << clusterID<< endl;
@@ -740,7 +813,8 @@ SpeciesClusterManager::expectationStep_Species(string& specName, CLUSTERSET* exp
 		vector<double>* exprProf=exprMgr->getExp(vIter->first);
 		map<int,double> mixOutProbs;
 		double sum=0;
-		if(strcmp(vIter->first.c_str(),"orf19.5809")==0 || strcmp(vIter->first.c_str(),"Q0080")==0)
+		//if(strcmp(vIter->first.c_str(),"orf19.5809")==0 || strcmp(vIter->first.c_str(),"Q0080")==0)
+		if(strstr(vIter->first.c_str(),"NRL")!=NULL)
 		{
 			cout << "Found " << vIter->first << endl;
 		}
@@ -889,7 +963,7 @@ SpeciesClusterManager::expectationStep_Test_Species(string& specName, CLUSTERSET
         return 0;
 }
 
-//SK: this is the penultimate function to call for caluculating the score for the test data
+//SK: this is the penultimate function to call for calculating the score for the test data
 double
 SpeciesClusterManager::getScore_Test()
 {
@@ -1011,10 +1085,10 @@ SpeciesClusterManager::getScore_Test()
 					//SK: increment the number of genes being counted in this species by one
                                         NSpeciesGenes+=1;
 					//SK: set number of data entries for each gene
-					if(NData==0)
-					{
+					//if(NData==0)
+					//{
 						NData=exprProf->size();
-					}
+					//}
 					//SK: get mixOutProbs for this gene
 					map<int,double>* mixOutProbs=gammaMgrTst->getLeafLikelihood_store(ogid,(string&)sIter->first);
 					//SK: loop over the Expert objects, as modeled above
@@ -2162,7 +2236,8 @@ SpeciesClusterManager::dumpAllInferredClusters_ScerwiseGrouped(const char* outpu
 
 
 int
-SpeciesClusterManager::dumpAllInferredClusters_LCA(const char* outputDir,vector<string>& speciesList, string& lcaName)
+//SpeciesClusterManager::dumpAllInferredClusters_LCA(const char* outputDir,vector<string>& speciesList, string& lcaName)
+SpeciesClusterManager::dumpAllInferredClusters_LCA(const char* outputDir,vector<string>& speciesList, string& lcaName,const char* treefile)	// repop
 {
 	char outputFName[1024];
 	sprintf(outputFName,"%s/allspecies_clusterassign_lca_brk.txt",outputDir);
@@ -2177,6 +2252,7 @@ SpeciesClusterManager::dumpAllInferredClusters_LCA(const char* outputDir,vector<
 	int badOG_DupLCA=0;
 	int badOG_NoLCA=0;
 	map<int,int> shownOGs;
+	map<string,string> children=readSpeciesTree(treefile);	// repop
 	for(int clusterID=0;clusterID<maxClusterCnt;clusterID++)
 	{
 		//Iterate over the allClusterAssignments but show only those groups for which the Anc14 cluster assingment matches
@@ -2294,6 +2370,8 @@ SpeciesClusterManager::dumpAllInferredClusters_LCA(const char* outputDir,vector<
 			}
 			shownOGs[ogid]=0;
 			int lcacnt=0;
+			//int prev_dup=0;	// repop(obs)
+			map<string,int> recent_anc_assign;	// repop
 			for(map<int,map<string,int>*>::iterator hIter=geneAssignSet.begin();hIter!=geneAssignSet.end();hIter++)
 			{
 				map<string,string>* gname=geneNamesSet[hIter->first];
@@ -2342,8 +2420,10 @@ SpeciesClusterManager::dumpAllInferredClusters_LCA(const char* outputDir,vector<
 				//}
 				string members;
 
+				map <string,int> this_OG_assign;	// repop
 				for(int s=0;s<speciesList.size();s++)
 				{
+					//map<int,map<string,int>*>::iterator tempitr1=geneAssignSet.find(1);
 					int geneclusterID=-2;
 					if(gset->find(speciesList[s])==gset->end())
 					{
@@ -2353,6 +2433,106 @@ SpeciesClusterManager::dumpAllInferredClusters_LCA(const char* outputDir,vector<
 					{	
 						geneclusterID=(*gset)[speciesList[s]];
 					}
+
+					// repopulating
+					if (strstr(speciesList[s].c_str(),"Anc")!=NULL)
+					{
+						if (hIter->first==1)	// case of 1st OG: just inherit all
+						{
+							if (geneclusterID!=-2)
+							{
+								recent_anc_assign[speciesList[s].c_str()]=geneclusterID;
+							}
+						}
+						else	// case of the other OG
+						{
+							if (strstr(speciesList[s].c_str(),"Anc1")!=NULL)	// Anc1: just copy previous
+							{
+								geneclusterID=recent_anc_assign[speciesList[s].c_str()];
+							}
+							else	// other Anc
+							{
+								if (geneclusterID!=-2)	// has clusterID: update recent_anc_assign
+								{
+									recent_anc_assign[speciesList[s].c_str()]=geneclusterID;
+								}
+								else	// has not clusterID: children check
+								{
+									int check_both_child_vacant = 0;
+									string leftkey=speciesList[s].c_str();
+									leftkey.append("_left");
+									map<string,string>::iterator iter1=children.find(leftkey);
+									if (iter1 != children.end()) 
+									{
+										/* (obsolete)
+										if ((*gset).find(iter1->second.c_str()) == (*gset).end())
+										{
+											check_both_child_vacant++;
+										}
+										else
+										{
+											int clusterID=(*gset)[iter1->second.c_str()];
+											if (clusterID==-2)
+											{
+												check_both_child_vacant++;
+											}
+										}*/
+										if (this_OG_assign[iter1->second.c_str()] == -2)
+										{
+                                                                                        check_both_child_vacant++;
+										}
+									}
+									string rightkey=speciesList[s].c_str();
+									rightkey.append("_right");
+									map<string,string>::iterator iter2=children.find(rightkey);
+									if (iter2 != children.end())
+									{
+										/* (obsolete)
+										if ((*gset).find(iter2->second.c_str()) == (*gset).end())
+										{
+											check_both_child_vacant++;
+										}
+										else
+										{
+											int clusterID=(*gset)[iter2->second.c_str()];
+											if (clusterID==-2)
+											{
+												check_both_child_vacant++;
+											}
+										}*/
+										if (this_OG_assign[iter2->second.c_str()] == -2)
+										{
+											check_both_child_vacant++;
+										}
+									}
+
+									if(check_both_child_vacant == 2) // both children are -2, remain acestor as -2
+									{
+										geneclusterID=-2;
+									}
+									else // copy from recent previous ancestral cluster assignment
+									{
+										//map<int,map<string,int>*>::iterator tempitr2=geneAssignSet.find(1);
+										/* (obsolete) copy down assignment from previous duplicated OG
+ 										map<int,map<string,int>*>::iterator DupIter=(geneAssignSet).find(prev_dup);
+										if (DupIter != geneAssignSet.end())
+										{
+											map<string,int>* DupIter_gset=DupIter->second;
+											map<string,int>::iterator SpcIter=(*DupIter_gset).find(speciesList[s]);
+											if (SpcIter != (*DupIter_gset).end())
+											{
+												geneclusterID=SpcIter->second;
+											}
+										}*/
+										geneclusterID=recent_anc_assign[speciesList[s].c_str()];
+									}
+								}
+							}
+						}
+					//cout << ogid << " - " << hIter->first << " - " << speciesList[s].c_str() << " - " << geneclusterID << endl;
+					}
+					// repop_end
+
 					if(members.length()>0)
 					{
 						members.append(";");
@@ -2360,6 +2540,7 @@ SpeciesClusterManager::dumpAllInferredClusters_LCA(const char* outputDir,vector<
 					if(gname->find(speciesList[s])==gname->end())
 					{
 						members.append("NULL");
+						//map<string,int>* prev_map = geneAssignSet.find(prev_dup);
 					}
 					else
 					{
@@ -2373,7 +2554,10 @@ SpeciesClusterManager::dumpAllInferredClusters_LCA(const char* outputDir,vector<
 					{
 						dFile<< "\t"<< geneclusterID;
 					}
+					this_OG_assign[speciesList[s].c_str()]=geneclusterID;	// repop
 				}
+				//prev_dup=hIter->first;	// repop(obs)
+
 				geneMembersFile <<"OG"<<ogid <<"_" << hIter->first <<"\t" << members << endl;
 				//if(ancClusterAssign==clusterID)
 				//{
@@ -2950,7 +3134,7 @@ SpeciesClusterManager::setMergedOGIDSet(map <int,int>& midset)
 }
 
 int
-SpeciesClusterManager::executePredictionMode(const char* outputDir, vector <string> speciesList)
+SpeciesClusterManager::executePredictionMode(const char* outputDir, vector <string> speciesList, const char* treeFName)	// repop
 {
 	cout << "Entering prediction mode" << endl;
 	char testDir[300];
@@ -2989,7 +3173,7 @@ SpeciesClusterManager::executePredictionMode(const char* outputDir, vector <stri
 	showClusters_Extant(testDir2);
 	showClusters_Ancestral(testDir2);
 	dumpAllInferredClusters_ScerwiseGrouped(outputDir,speciesList);
-	dumpAllInferredClusters_LCA(testDir2,speciesList,speciesList[speciesList.size()-1]);
+	dumpAllInferredClusters_LCA(testDir2,speciesList,speciesList[speciesList.size()-1],treeFName);	// repop
 	showClusters_Ancestral(testDir2);
 	dumpAllInferredClusterGammas(testDir2,speciesList);
 	//showInferredConditionals(testDir2);
