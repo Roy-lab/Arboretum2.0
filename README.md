@@ -1,5 +1,6 @@
 # Arboretum (version 2.4)
 
+---
 ### How to compile the executable
 ---
 type "make" in the arboretum directory.
@@ -11,6 +12,7 @@ The executable will be named arboretum.
 <br>
 <br>
 
+---
 ### How to get the usage description
 ---
 You can obtain the usage for this version with
@@ -21,6 +23,7 @@ Detail description for the input arguments is available at [README.txt](https://
 <br>
 <br>
 
+---
 ### Differences / Key debugging log
 ---
 - Addition of the usage of **fixed covariance** values
